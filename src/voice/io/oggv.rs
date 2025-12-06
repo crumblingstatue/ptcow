@@ -3,7 +3,6 @@ use {
     crate::{VoiceData, voice_data::oggv::OggVData},
 };
 
-#[expect(clippy::too_many_arguments)]
 pub fn read(
     rd: &mut crate::io::Reader,
     io_oggv: &IoOggv,
@@ -12,14 +11,12 @@ pub fn read(
     ch: i32,
     sps2: i32,
     smp_num: i32,
-    size2: u32,
 ) {
     unit.data = VoiceData::OggV(OggVData {
         raw_bytes: rd.data[rd.cur..rd.cur + size].to_vec(),
         ch,
         sps2,
         smp_num,
-        size: size2,
     });
     rd.cur += size;
     unit.flags = io_oggv.voice_flags;

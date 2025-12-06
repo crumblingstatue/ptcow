@@ -14,7 +14,6 @@ pub struct OggVData {
     pub sps2: i32,
     /// Number of samples
     pub smp_num: i32,
-    pub size: u32,
 }
 
 pub fn decode_oggv(raw_data: &[u8]) -> Option<PcmData> {

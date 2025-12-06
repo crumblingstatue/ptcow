@@ -309,7 +309,6 @@ impl Voice {
                 ch,
                 sps2,
                 smp_num,
-                size,
             );
             Ok(())
         }
