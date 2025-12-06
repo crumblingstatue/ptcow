@@ -6,7 +6,7 @@ description = "Library for editing and playback of PxTone (.ptcop) music"
 repository = "https://github.com/crumblingstatue/ptcow"
 keywords = ["music", "pxtone", "pixel", "ptcop"]
 license = "0BSD"
-rust-version = "1.90"
+rust-version = "1.88"
 
 [features]
 default = ["oggv"]
