@@ -5,7 +5,7 @@ use {
     clap::Parser,
     ptcow::{Herd, MooInstructions, MooPlan, SampleRate, Unit, VoiceData, moo_prepare},
     std::{
-        io::{ErrorKind, Write as _},
+        io::{ErrorKind, IsTerminal, Write as _},
         iter::zip,
         path::PathBuf,
     },
@@ -62,6 +62,10 @@ fn main() {
 
     let mut buf = vec![0i16; args.buf_size];
     let mut writer = std::io::stdout().lock();
+    if writer.is_terminal() {
+        eprintln!("You don't want to write sample data to a terminal. Trust me.");
+        return;
+    }
     if vis {
         eprintln!("Playing {}", song.text.name);
         eprintln!("Comment:\n{}", song.text.comment);
