@@ -41,7 +41,13 @@ fn main() {
             args.buf_size
         );
     }
-    let data = std::fs::read(&args.path).unwrap();
+    let data = match std::fs::read(&args.path) {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!("Failed to read '{}': {e}", args.path.display());
+            return;
+        }
+    };
     let (song, mut herd, mut ins) = ptcow::read_song(&data, args.sample_rate).unwrap();
     if vis {
         eprintln!("\x1b[?25l");
