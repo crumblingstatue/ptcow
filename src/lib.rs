@@ -49,6 +49,7 @@ pub use {
     voice::{EnvelopeSrc, Voice, VoiceData, VoiceFlags, VoiceInstance, VoiceTone, VoiceUnit},
     voice_data::{
         noise::{NoiseData, NoiseDesignUnit},
+        oggv::OggVData,
         pcm::PcmData,
         wave::WaveData,
     },

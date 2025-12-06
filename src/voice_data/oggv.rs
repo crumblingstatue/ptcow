@@ -3,11 +3,16 @@ use {
     bytemuck::Contiguous as _,
 };
 
+/// Ogg/Vorbis voice data
 #[derive(Clone)]
 pub struct OggVData {
+    /// Raw Ogg/Vorbis data
     pub raw_bytes: Vec<u8>,
+    /// Channel number
     pub ch: i32,
+    /// Samples per second
     pub sps2: i32,
+    /// Number of samples
     pub smp_num: i32,
     pub size: u32,
 }
