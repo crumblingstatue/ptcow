@@ -10,7 +10,7 @@ use crate::{
     noise_builder::{NoiseTable, noise_to_pcm},
     point::EnvPt,
     pulse_oscillator::{OsciArgs, coord, overtone},
-    voice_data::{noise::NoiseData, pcm::PcmData, wave::WaveData},
+    voice_data::{noise::NoiseData, oggv::OggVData, pcm::PcmData, wave::WaveData},
 };
 
 #[derive(Clone)]
@@ -23,6 +23,8 @@ pub enum VoiceData {
     Pcm(PcmData),
     /// Wave instrument
     Wave(WaveData),
+    /// Ogg/Vorbis instrument
+    OggV(OggVData),
 }
 
 /// Contains the precomputed sample and envelope data for a voice
@@ -246,14 +248,24 @@ impl Voice {
                     vinst.num_samples = body;
                     vinst.sample_buf = buf;
                 }
-
                 VoiceData::Noise(ptn) => {
                     vinst.sample_buf = noise_to_pcm(ptn, ptn_bldr).into_sample_buf();
                     vinst.num_samples = ptn.smp_num_44k;
                 }
-
                 VoiceData::Wave(wave) => {
                     vinst.recalc_wave_data(wave, vunit.volume, vunit.pan);
+                }
+                VoiceData::OggV(ogg_vdata) => {
+                    match crate::voice_data::oggv::decode_oggv(&ogg_vdata.raw_bytes) {
+                        Some(pcm) => {
+                            let (body, buf) = pcm.to_converted(NATIVE_SAMPLE_RATE);
+                            vinst.num_samples = body;
+                            vinst.sample_buf = buf;
+                        }
+                        None => {
+                            eprintln!("Failed to decode Ogg/Vorbis data");
+                        }
+                    }
                 }
             }
         }

@@ -6,7 +6,7 @@ use crate::{
     pulse_oscillator::OsciPt,
     result::{ProjectReadError, ProjectWriteError, ReadResult, WriteResult},
     voice::{EnvelopeSrc, Voice, VoiceFlags},
-    voice_data::{noise::NoiseData, pcm::PcmData, wave::WaveData},
+    voice_data::{noise::NoiseData, oggv::OggVData, pcm::PcmData, wave::WaveData},
 };
 
 #[cfg(feature = "oggv")]
@@ -173,6 +173,33 @@ impl Voice {
             .copy_from_slice(&io_ptv_written_size.to_le_bytes());
         Ok(())
     }
+    pub(crate) fn write_mate_oggv(&self, out: &mut Vec<u8>, data: &OggVData) {
+        out.extend_from_slice(Tag::MateOGGV.to_code());
+        let misc_size: u32 = 4 * 4; // ch, sps2, smp_num, size2
+        #[expect(clippy::cast_possible_truncation)]
+        let size: u32 = size_of::<IoOggv>() as u32 + data.raw_bytes.len() as u32 + misc_size;
+        out.extend_from_slice(&size.to_le_bytes());
+        let io_oggv: IoOggv = IoOggv {
+            xxx: 0,
+            basic_key: self.units[0].basic_key.try_into().unwrap(),
+            voice_flags: self.units[0].flags,
+            tuning: self.units[0].tuning,
+        };
+        out.extend_from_slice(bytemuck::bytes_of(&io_oggv));
+        let ch: i32 = data.ch;
+        out.extend_from_slice(&ch.to_le_bytes());
+        let sps2: i32 = data.sps2;
+        out.extend_from_slice(&sps2.to_le_bytes());
+        let smp_num: i32 = data.smp_num;
+        out.extend_from_slice(&smp_num.to_le_bytes());
+        #[expect(clippy::cast_possible_truncation)]
+        let size2: u32 = data.raw_bytes.len() as u32;
+        out.extend_from_slice(&size2.to_le_bytes());
+        if size2 == 0 {
+            return;
+        }
+        out.extend_from_slice(&data.raw_bytes);
+    }
     #[expect(clippy::inconsistent_digit_grouping)]
     fn ptv_read(&mut self, rd: &mut crate::io::Reader) -> ReadResult {
         if &rd.next::<[u8; 8]>()? != b"PTVOICE-" {
@@ -265,16 +292,26 @@ impl Voice {
         #[cfg_attr(not(feature = "oggv"), expect(unused_variables))]
         let io_oggv: IoOggv = rd.next()?;
         self.allocate::<false>();
-        let _ch: i32 = rd.next()?;
-        let _sps2: i32 = rd.next()?;
-        let _smp_num: i32 = rd.next()?;
+        let ch: i32 = rd.next()?;
+        let sps2: i32 = rd.next()?;
+        let smp_num: i32 = rd.next()?;
         let size: u32 = rd.next()?;
         if size == 0 {
             return Ok(());
         }
         #[cfg(feature = "oggv")]
         {
-            oggv::read(rd, &io_oggv, size as usize, &mut self.units[0])
+            oggv::read(
+                rd,
+                &io_oggv,
+                size as usize,
+                &mut self.units[0],
+                ch,
+                sps2,
+                smp_num,
+                size,
+            );
+            Ok(())
         }
         #[cfg(not(feature = "oggv"))]
         {
@@ -283,7 +320,7 @@ impl Voice {
     }
 }
 
-#[derive(Clone, Copy, bytemuck::AnyBitPattern)]
+#[derive(Clone, Copy, bytemuck::AnyBitPattern, bytemuck::NoUninit)]
 #[repr(C)]
 struct IoOggv {
     xxx: u16,

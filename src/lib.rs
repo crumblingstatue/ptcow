@@ -19,6 +19,7 @@ mod voice;
 
 mod voice_data {
     pub mod noise;
+    pub mod oggv;
     pub mod pcm;
     pub mod wave;
 }

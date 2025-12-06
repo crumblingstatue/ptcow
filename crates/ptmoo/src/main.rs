@@ -122,6 +122,7 @@ fn print(herd: &Herd, ins: &MooInstructions) {
                 VoiceData::Noise(_) => "🥁",
                 VoiceData::Pcm(_) => "🎤",
                 VoiceData::Wave(_) => "〰️",
+                VoiceData::OggV(_) => "🐠", // Ogg/Vorbis logo is a fish
             };
             let ratio = f64::from(val.abs()) / 4_194_304.0;
             #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
