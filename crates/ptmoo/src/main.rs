@@ -48,7 +48,13 @@ fn main() {
             return;
         }
     };
-    let (song, mut herd, mut ins) = ptcow::read_song(&data, args.sample_rate).unwrap();
+    let (song, mut herd, mut ins) = match ptcow::read_song(&data, args.sample_rate) {
+        Ok((song, herd, ins)) => (song, herd, ins),
+        Err(e) => {
+            eprintln!("Failed to read '{}' as PxTone: {e}", args.path.display());
+            return;
+        }
+    };
     if vis {
         eprintln!("\x1b[?25l");
         ctrlc::set_handler(move || {
