@@ -1,0 +1,61 @@
+digraph "How pan time plays into rendering" {
+    // -----
+    // Nodes
+    // -----
+
+    ppt[label="Pre-pantime output of unit 🐄"]
+    {
+        rank=same;
+        po_l[label = "left pan-time offset" color="blue"];
+        po_r[label = "right pan-time offset" color="red"];
+    }
+    out_samp[label = "Output sample"];
+    {
+        rank=same;
+        node [shape=plaintext];
+        lbuf [
+            label=<
+                <table border="0" cellborder="1" cellspacing="0">
+                    <tr>
+                        <td>...</td>
+                        <td>    </td>
+                        <td port="l1" bgcolor="blue">    </td>
+                        <td>    </td>
+                        <td>    </td>
+                        <td>    </td>
+                        <td>...</td>
+                    </tr>
+                </table>
+            >
+            xlabel="left buf"
+        ];
+        rbuf [
+            label=<
+                <table border="0" cellborder="1" cellspacing="0">
+                    <tr>
+                        <td>...</td>
+                        <td>    </td>
+                        <td>    </td>
+                        <td>    </td>
+                        <td port="r3" bgcolor="red">    </td>
+                        <td>    </td>
+                        <td>...</td>
+                    </tr>
+                </table>
+            >
+            xlabel="right buf"
+        ];
+    }
+    // -----------
+    // Connections
+    // -----------
+
+    // Place lbuf and rbuf further apart horizontally
+    lbuf -> rbuf [style=invis minlen=5]
+    ppt -> {po_l; po_r} [style=invis]
+    ppt -> {lbuf, rbuf}
+    po_l -> lbuf:l1
+    po_r -> rbuf:r3
+    lbuf:l1 -> out_samp
+    rbuf:r3 -> out_samp
+}

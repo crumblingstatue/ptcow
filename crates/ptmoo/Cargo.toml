@@ -1,0 +1,17 @@
+[package]
+name = "ptmoo"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+oggv = ["ptcow/oggv"]
+
+[dependencies]
+bytemuck.workspace = true
+clap.workspace = true
+ctrlc = "3.5"
+string-width = "0.1"
+ptcow.path = "../../"
+
+[lints]
+workspace = true

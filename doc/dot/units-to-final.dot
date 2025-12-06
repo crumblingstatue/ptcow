@@ -1,0 +1,26 @@
+digraph "Rendering process from units to final output" {
+    {
+        rank=same;
+        node [label="🐄 Unit"];
+        unit1; unit2; unit3; unit4; unit5; unit6; unit7;
+    }
+
+    {
+        rank=same;
+        node [label = "🔢 Group"]
+        group1; group2; group3;
+        node [label = "🔊 Effects"]
+        fx1; fx2;
+    }
+
+    {
+        rank=same;
+        final[label = "🎶 Final mix"]
+    }
+    
+    {unit1, unit2, unit3} -> group1
+    {unit4, unit5, unit6} -> group2
+    fx1 -> group1; fx2 -> group2
+    {unit7} -> group3
+    {group1, group2, group3} -> final
+}
