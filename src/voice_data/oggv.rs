@@ -32,7 +32,7 @@ pub fn decode_oggv(raw_data: &[u8]) -> Option<PcmData> {
     }
     pcm.smp = bytemuck::pod_collect_to_vec(&i16_samples);
     #[expect(clippy::cast_possible_truncation)]
-    (pcm.num_samples = pcm.smp.len() as u32 / 2);
+    (pcm.num_samples = pcm.smp.len() as u32 / 2 / pcm.ch as u32);
     Some(pcm)
 }
 
