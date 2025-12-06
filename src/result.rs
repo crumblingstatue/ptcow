@@ -7,8 +7,15 @@ pub enum ProjectReadError {
     #[error("anti operation")]
     AntiOpreation,
     /// Low level data read error (premature EOF, varint parsing error)
-    #[error("Data read error")]
-    Data,
+    #[error("Error reading `{what}` at position {cursor} (source length: {len})")]
+    Data {
+        /// What kind of data failed to read
+        what: &'static str,
+        /// Last cursor position
+        cursor: usize,
+        /// Data source length
+        len: usize,
+    },
     /// Format newer than supported
     #[error("Format newer than supported")]
     FmtNewer,

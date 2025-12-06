@@ -6,28 +6,48 @@ pub struct Reader<'a> {
 }
 
 #[derive(Debug)]
-pub struct ReadError;
+pub struct ReadError {
+    what: &'static str,
+    cursor: usize,
+    len: usize,
+}
 
 impl From<ReadError> for ProjectReadError {
-    fn from(ReadError: ReadError) -> Self {
-        Self::Data
+    fn from(err: ReadError) -> Self {
+        Self::Data {
+            what: err.what,
+            cursor: err.cursor,
+            len: err.len,
+        }
     }
 }
 
 impl Reader<'_> {
     pub fn next<T: bytemuck::AnyBitPattern>(&mut self) -> Result<T, ReadError> {
         let amount = size_of::<T>();
-        let bytes = self.data.get(self.cur..self.cur + amount).ok_or(ReadError)?;
+        let bytes = self.data.get(self.cur..self.cur + amount).ok_or_else(|| ReadError {
+            what: std::any::type_name::<T>(),
+            cursor: self.cur,
+            len: self.data.len(),
+        })?;
         self.cur += amount;
         Ok(bytemuck::pod_read_unaligned(bytes))
     }
     pub fn fill_slice(&mut self, dst: &mut [u8]) -> Result<(), ReadError> {
         let amount = dst.len();
         let Some(src) = self.data.get(self.cur..self.cur + amount) else {
-            return Err(ReadError);
+            return Err(ReadError {
+                what: "byte array",
+                cursor: self.cur,
+                len: self.data.len(),
+            });
         };
         if src.len() != dst.len() {
-            return Err(ReadError);
+            return Err(ReadError {
+                what: "byte array",
+                cursor: self.cur,
+                len: self.data.len(),
+            });
         }
         dst.copy_from_slice(src);
         self.cur += amount;
@@ -45,7 +65,11 @@ impl Reader<'_> {
             }
             count += 1;
         }
-        varint_to_int(&a).ok_or(ReadError)
+        varint_to_int(&a).ok_or(ReadError {
+            what: "varint",
+            cursor: self.cur,
+            len: self.data.len(),
+        })
     }
 }
 
