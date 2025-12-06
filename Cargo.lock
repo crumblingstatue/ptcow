@@ -314,7 +314,7 @@ dependencies = [
 
 [[package]]
 name = "ptcow"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "arrayvec",
  "bitflags",
@@ -326,7 +326,7 @@ dependencies = [
 
 [[package]]
 name = "ptmoo"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bytemuck",
  "clap",
