@@ -12,6 +12,8 @@ clap.workspace = true
 ctrlc = "3.5"
 string-width = "0.1"
 ptcow.path = "../../"
+crossterm.version = "0.29"
+crossterm.default-features = false
 
 [lints]
 workspace = true

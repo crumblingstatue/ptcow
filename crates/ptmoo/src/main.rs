@@ -3,11 +3,16 @@
 
 use {
     clap::Parser,
+    crossterm::{QueueableCommand, cursor, terminal},
     ptcow::{Herd, MooInstructions, MooPlan, SampleRate, Unit, VoiceData, moo_prepare},
     std::{
         io::{ErrorKind, IsTerminal, Write as _},
         iter::zip,
         path::PathBuf,
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
     },
     string_width::DisplayWidth,
 };
@@ -30,40 +35,37 @@ struct Args {
     no_vis: bool,
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let args = Args::parse();
     let vis = !args.no_vis;
+    let mut stderr = std::io::stderr().lock();
     if vis {
-        eprintln!(
+        writeln!(
+            stderr,
             "File: {}\nRate: {}\nBufsize: {}",
             args.path.display(),
             args.sample_rate,
             args.buf_size
-        );
+        )?;
     }
     let data = match std::fs::read(&args.path) {
         Ok(data) => data,
         Err(e) => {
-            eprintln!("Failed to read '{}': {e}", args.path.display());
-            return;
+            writeln!(stderr, "Failed to read '{}': {e}", args.path.display())?;
+            return Err(std::io::Error::other("File read error"));
         }
     };
     let (song, mut herd, mut ins) = match ptcow::read_song(&data, args.sample_rate) {
         Ok((song, herd, ins)) => (song, herd, ins),
         Err(e) => {
-            eprintln!("Failed to read '{}' as PxTone: {e}", args.path.display());
-            return;
+            writeln!(
+                stderr,
+                "Failed to read '{}' as PxTone: {e}",
+                args.path.display()
+            )?;
+            return Err(std::io::Error::other("PxTone read error"));
         }
     };
-    if vis {
-        eprintln!("\x1b[?25l");
-        ctrlc::set_handler(move || {
-            eprintln!("\x1bc");
-            eprintln!("\x1b[?25h");
-        })
-        .unwrap();
-    }
-
     let plan = MooPlan {
         start_pos: ptcow::StartPosPlan::Sample(0),
         meas_end: 0,
@@ -75,12 +77,25 @@ fn main() {
     let mut buf = vec![0i16; args.buf_size];
     let mut writer = std::io::stdout().lock();
     if writer.is_terminal() {
-        eprintln!("You don't want to write sample data to a terminal. Trust me.");
-        return;
+        writeln!(
+            stderr,
+            "You don't want to write sample data to a terminal. Trust me."
+        )?;
+        return Err(std::io::Error::other(
+            "Attempting to write sample data to terminal",
+        ));
     }
+    let stop = Arc::new(AtomicBool::new(false));
     if vis {
-        eprintln!("Playing {}", song.text.name);
-        eprintln!("Comment:\n{}", song.text.comment);
+        stderr.queue(terminal::EnterAlternateScreen)?;
+        stderr.queue(cursor::Hide)?;
+        writeln!(stderr, "Playing {}", song.text.name)?;
+        writeln!(stderr, "Comment:\n{}", song.text.comment)?;
+        let stop = stop.clone();
+        ctrlc::set_handler(move || {
+            stop.store(true, Ordering::Relaxed);
+        })
+        .unwrap();
     }
 
     while herd.moo(&ins, &song, &mut buf, true) {
@@ -93,24 +108,34 @@ fn main() {
                 _ => panic!("I/O error: {e}"),
             }
         }
+        if stop.load(Ordering::Relaxed) {
+            writeln!(stderr, "Gotta stop!")?;
+            break;
+        }
         if vis {
-            print(&herd, &ins);
+            print(&mut stderr, &herd, &ins)?;
         }
     }
-    if vis {
-        eprintln!("\x1bc");
-        eprintln!("\x1b[?25h");
-    }
+    stderr.queue(terminal::LeaveAlternateScreen)?;
+    stderr.queue(cursor::Show)?;
+    stderr.flush()?;
+    Ok(())
 }
 
-fn print(herd: &Herd, ins: &MooInstructions) {
+fn print(
+    stderr: &mut std::io::StderrLock,
+    herd: &Herd,
+    ins: &MooInstructions,
+) -> std::io::Result<()> {
     let ratio = f64::from(herd.smp_count) / f64::from(herd.smp_end);
-    eprintln!(
-        "\x1b[K{}/{} ({:.02}%)",
+    stderr.queue(terminal::Clear(terminal::ClearType::CurrentLine))?;
+    writeln!(
+        stderr,
+        "{}/{} ({:.02}%)",
         herd.smp_count,
         herd.smp_end,
         ratio * 100.
-    );
+    )?;
     let mut total_shown = 0;
     let (name_widths, name_max) = name_widths(&herd.units);
     for (unit, nw) in zip(&herd.units, name_widths) {
@@ -134,12 +159,15 @@ fn print(herd: &Herd, ins: &MooInstructions) {
             } else {
                 (&*" ".repeat(nw), "╰─")
             };
-            eprintln!("\x1b[K{cow}{name}{fill} {kind} {moo}");
+            stderr.queue(terminal::Clear(terminal::ClearType::CurrentLine))?;
+            writeln!(stderr, "{cow}{name}{fill} {kind} {moo}")?;
             total_shown += 1;
         }
     }
     let up = total_shown + 1;
-    eprint!("\x1b[{up}A\r");
+    stderr.queue(cursor::MoveUp(up))?;
+    stderr.flush()?;
+    Ok(())
 }
 
 fn name_widths(units: &[Unit]) -> (Vec<usize>, usize) {
