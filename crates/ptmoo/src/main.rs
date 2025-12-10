@@ -88,9 +88,8 @@ fn main() -> std::io::Result<()> {
     let stop = Arc::new(AtomicBool::new(false));
     if vis {
         stderr.queue(terminal::EnterAlternateScreen)?;
+        stderr.queue(terminal::DisableLineWrap)?;
         stderr.queue(cursor::Hide)?;
-        writeln!(stderr, "Playing {}", song.text.name)?;
-        writeln!(stderr, "Comment:\n{}", song.text.comment)?;
         let stop = stop.clone();
         ctrlc::set_handler(move || {
             stop.store(true, Ordering::Relaxed);
@@ -113,7 +112,7 @@ fn main() -> std::io::Result<()> {
             break;
         }
         if vis {
-            print(&mut stderr, &herd, &ins)?;
+            print(&mut stderr, &song, &herd, &ins)?;
         }
     }
     stderr.queue(terminal::LeaveAlternateScreen)?;
@@ -124,19 +123,25 @@ fn main() -> std::io::Result<()> {
 
 fn print(
     stderr: &mut std::io::StderrLock,
+    song: &ptcow::Song,
     herd: &Herd,
     ins: &MooInstructions,
 ) -> std::io::Result<()> {
     let ratio = f64::from(herd.smp_count) / f64::from(herd.smp_end);
-    stderr.queue(terminal::Clear(terminal::ClearType::CurrentLine))?;
+    stderr.queue(terminal::Clear(terminal::ClearType::All))?;
+    if !song.text.name.is_empty() {
+        writeln!(stderr, "= {} =", song.text.name)?;
+    }
+    if !song.text.comment.is_empty() {
+        writeln!(stderr, "\n{}\n", song.text.comment)?;
+    }
     writeln!(
         stderr,
         "{}/{} ({:.02}%)",
         herd.smp_count,
         herd.smp_end,
-        ratio * 100.
+        ratio * 100.,
     )?;
-    let mut total_shown = 0;
     let (name_widths, name_max) = name_widths(&herd.units);
     for (unit, nw) in zip(&herd.units, name_widths) {
         let val: i32 = unit.pan_time_bufs.iter().flatten().sum();
@@ -159,13 +164,10 @@ fn print(
             } else {
                 (&*" ".repeat(nw), "╰─")
             };
-            stderr.queue(terminal::Clear(terminal::ClearType::CurrentLine))?;
             writeln!(stderr, "{cow}{name}{fill} {kind} {moo}")?;
-            total_shown += 1;
         }
     }
-    let up = total_shown + 1;
-    stderr.queue(cursor::MoveUp(up))?;
+    stderr.queue(cursor::MoveTo(0, 0))?;
     stderr.flush()?;
     Ok(())
 }
