@@ -3,7 +3,7 @@
 
 use {
     clap::Parser,
-    crossterm::{QueueableCommand, cursor, terminal},
+    crossterm::{QueueableCommand, SynchronizedUpdate, cursor, terminal},
     ptcow::{Herd, MooInstructions, MooPlan, SampleRate, Unit, VoiceData, moo_prepare},
     std::{
         io::{ErrorKind, IsTerminal, Write as _},
@@ -112,7 +112,7 @@ fn main() -> std::io::Result<()> {
             break;
         }
         if vis {
-            print(&mut stderr, &song, &herd, &ins)?;
+            stderr.sync_update(|stderr| print(stderr, &song, &herd, &ins))??;
         }
     }
     stderr.queue(terminal::LeaveAlternateScreen)?;
@@ -168,7 +168,6 @@ fn print(
         }
     }
     stderr.queue(cursor::MoveTo(0, 0))?;
-    stderr.flush()?;
     Ok(())
 }
 
