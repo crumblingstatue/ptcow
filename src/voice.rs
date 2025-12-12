@@ -51,6 +51,8 @@ impl VoiceInstance {
     pub fn recalc_envelope(&mut self, voice_unit: &VoiceUnit, out_sps: SampleRate) {
         let envelope = &(voice_unit).envelope;
         let Some((prepared, head)) = envelope.to_prepared(out_sps) else {
+            // We want to be able to remove envelopes when the envelope source is empty
+            self.env = Vec::new();
             return;
         };
         self.env = prepared;
