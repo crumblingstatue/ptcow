@@ -179,6 +179,10 @@ pub struct VoiceUnit {
     /// The data the voice samples are generated from
     pub data: VoiceData,
     /// The data the voice envelope is generated from
+    ///
+    /// Note: The envelope is only used by [`Wave`](crate::VoiceData::Wave) voices.
+    ///
+    /// If you try to serialize the envelope, it will be ignored if the voice type isn't `Wave`.
     pub envelope: EnvelopeSrc,
 }
 
