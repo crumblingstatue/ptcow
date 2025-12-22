@@ -82,3 +82,6 @@ pub type SampleRate = u16;
 pub type SourceSampleRate = u32;
 /// The sample rate `PxTone` internally works with
 pub const NATIVE_SAMPLE_RATE: SampleRate = 44_100;
+
+#[cfg(target_endian = "big")]
+const _: () = panic!("Only little endian architectures are supported currently.");
