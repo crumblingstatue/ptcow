@@ -15,6 +15,11 @@ Based on the PxTone C++ source code available [here](<https://pxtone.org/develop
 - ✅ Rendering that sounds faithful to the original PxTone rendering
 - ❌ No sample-by-sample accuracy. There can be minor differences as long as it sounds (almost) indistinguishable.
 
+## Limitations
+
+- Currently, ptcow only supports little endian architectures.
+  There may be big endian support added in the future, but it's not a focus right now.
+
 ## Getting Started
 
 To get started, load a `.ptcop` or `.pttune` file into a `Vec<u8>`, and call [`read_song`] on it.
