@@ -16,6 +16,7 @@ pub struct OggVData {
     pub smp_num: i32,
 }
 
+#[cfg(feature = "oggv")]
 pub fn decode_oggv(raw_data: &[u8]) -> Option<PcmData> {
     let mut dec = vorbis_rs::VorbisDecoder::<&[u8]>::new(raw_data).ok()?;
     let mut pcm = PcmData::new();

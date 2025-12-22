@@ -4,6 +4,7 @@ version = "0.2.0"
 edition = "2024"
 
 [features]
+default = ["oggv"]
 oggv = ["ptcow/oggv"]
 
 [dependencies]
@@ -12,6 +13,7 @@ clap.workspace = true
 ctrlc = "3.5"
 string-width = "0.1"
 ptcow.path = "../../"
+ptcow.default-features = false
 crossterm.version = "0.29"
 crossterm.default-features = false
 

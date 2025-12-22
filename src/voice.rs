@@ -262,6 +262,7 @@ impl Voice {
                     vinst.recalc_wave_data(wave, vunit.volume, vunit.pan);
                 }
                 VoiceData::OggV(ogg_vdata) => {
+                    #[cfg(feature = "oggv")]
                     match crate::voice_data::oggv::decode_oggv(&ogg_vdata.raw_bytes) {
                         Some(pcm) => {
                             let (body, buf) = pcm.to_converted(NATIVE_SAMPLE_RATE);
@@ -272,6 +273,8 @@ impl Voice {
                             eprintln!("Failed to decode Ogg/Vorbis data");
                         }
                     }
+                    #[cfg(not(feature = "oggv"))]
+                    panic!("Ogg/Vorbis support was disabled.");
                 }
             }
         }
