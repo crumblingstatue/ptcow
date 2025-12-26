@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.1 - 2025.12.26
+
+### ptcow
+
+- Fix compile error when compiling without Ogg/Vorbis support
+- Make lack of big endian support explicit
+- When recalculating voice envelope, properly remove output envelope if source doesn't exist
+- Minor documentation improvements
+
+### ptmoo
+
+- Use crossterm instead of raw ANSI sequences
+- Fix flickering and visualization artifacts in terminal output
+
 ## 0.2.0 - 2025.12.06
 
 ### ptcow
