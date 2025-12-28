@@ -68,8 +68,8 @@ fn main() -> std::io::Result<()> {
     };
     let plan = MooPlan {
         start_pos: ptcow::StartPosPlan::Sample(0),
-        meas_end: 0,
-        meas_repeat: 0,
+        meas_end: None,
+        meas_repeat: None,
         loop_: !args.no_loop,
     };
     moo_prepare(&mut ins, &mut herd, &song, &plan);

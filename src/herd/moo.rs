@@ -266,16 +266,8 @@ fn calc_sample_num(meas_num: u32, beat_num: u32, sps: SampleRate, beat_tempo: f3
 pub fn moo_prepare(ins: &mut MooInstructions, herd: &mut Herd, song: &Song, plan: &MooPlan) {
     assert_ne!(ins.out_sample_rate, 0);
 
-    let meas_end = if plan.meas_end != 0 {
-        plan.meas_end
-    } else {
-        song.master.get_play_meas()
-    };
-    let meas_repeat = if plan.meas_repeat != 0 {
-        plan.meas_repeat
-    } else {
-        song.master.loop_points.repeat
-    };
+    let meas_end = plan.meas_end.unwrap_or_else(|| song.master.get_play_meas());
+    let meas_repeat = plan.meas_repeat.unwrap_or(song.master.loop_points.repeat);
 
     herd.loop_ = plan.loop_;
 
@@ -344,9 +336,9 @@ pub struct MooPlan {
     /// Start position
     pub start_pos: StartPosPlan,
     /// End position
-    pub meas_end: Meas,
+    pub meas_end: Option<Meas>,
     /// Repeat position
-    pub meas_repeat: Meas,
+    pub meas_repeat: Option<Meas>,
     /// Whether to loop the song
     pub loop_: bool,
 }
