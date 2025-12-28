@@ -87,7 +87,7 @@ pub fn tick_to_sample(tick: Tick, samples_per_tick: SamplesPerTick) -> SampleT {
 
 /// Converts [`Meas`] to a number of [samples](SampleT).
 #[must_use]
-pub fn meas_to_sample(meas: Meas, samples_per_tick: f32, timing: Timing) -> SampleT {
+pub fn meas_to_sample(meas: Meas, samples_per_tick: SamplesPerTick, timing: Timing) -> SampleT {
     // Note: Yes, this does need to use f64 to remain sample accurate with original PxTone playback
     #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     ((f64::from(meas)
