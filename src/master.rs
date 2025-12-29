@@ -58,21 +58,21 @@ impl Master {
         if size != 15 {
             return Err(ProjectReadError::FmtUnknown);
         }
-        let beat_clock = rd.next::<u16>()?;
-        let beat_num = rd.next::<u8>()?;
-        let beat_tempo = rd.next::<f32>()?;
+        let ticks_per_beat = rd.next::<u16>()?;
+        let beats_per_meas = rd.next::<u8>()?;
+        let bpm = rd.next::<f32>()?;
         let clock_repeat = rd.next::<u32>()?;
         let clock_last = rd.next::<u32>()?;
 
         let timing = Timing {
-            ticks_per_beat: beat_clock,
-            bpm: beat_tempo,
-            beats_per_meas: beat_num,
+            ticks_per_beat,
+            bpm,
+            beats_per_meas,
         };
 
         let loop_points = LoopPoints {
-            repeat: clock_repeat / u32::from(u16::from(beat_num) * beat_clock),
-            last: clock_last / u32::from(u16::from(beat_num) * beat_clock),
+            repeat: clock_repeat / u32::from(u16::from(beats_per_meas) * ticks_per_beat),
+            last: clock_last / u32::from(u16::from(beats_per_meas) * ticks_per_beat),
         };
 
         Ok(Self {
