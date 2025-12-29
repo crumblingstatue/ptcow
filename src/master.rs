@@ -20,6 +20,15 @@ pub struct LoopPoints {
     pub repeat: Meas,
 }
 
+impl LoopPoints {
+    pub fn from_ticks(repeat: Tick, last: Tick, timing: Timing) -> Self {
+        Self {
+            last: tick_to_meas(last, timing),
+            repeat: tick_to_meas(repeat, timing),
+        }
+    }
+}
+
 impl Default for Master {
     fn default() -> Self {
         Self {
@@ -61,8 +70,8 @@ impl Master {
         let ticks_per_beat = rd.next::<u16>()?;
         let beats_per_meas = rd.next::<u8>()?;
         let bpm = rd.next::<f32>()?;
-        let clock_repeat = rd.next::<u32>()?;
-        let clock_last = rd.next::<u32>()?;
+        let repeat_tick = rd.next::<u32>()?;
+        let last_tick = rd.next::<u32>()?;
 
         let timing = Timing {
             ticks_per_beat,
@@ -70,14 +79,9 @@ impl Master {
             beats_per_meas,
         };
 
-        let loop_points = LoopPoints {
-            repeat: clock_repeat / u32::from(u16::from(beats_per_meas) * ticks_per_beat),
-            last: clock_last / u32::from(u16::from(beats_per_meas) * ticks_per_beat),
-        };
-
         Ok(Self {
             timing,
-            loop_points,
+            loop_points: LoopPoints::from_ticks(repeat_tick, last_tick, timing),
             meas_num: 1,
         })
     }
