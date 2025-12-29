@@ -1,5 +1,5 @@
 //! Timing related definitions and utilities
-use crate::SampleRate;
+use {crate::SampleRate, std::num::NonZeroU32};
 
 /// Clock ticks.
 ///
@@ -12,6 +12,8 @@ pub type Tick16 = u16;
 ///
 /// [`Timing::beats_per_meas`] defines how many beats are in a `Meas`.
 pub type Meas = u32;
+/// A non-zero [`Meas`].
+pub type NonZeroMeas = NonZeroU32;
 
 /// The smallest unit of time we deal with; an audio sample.
 pub type SampleT = u32;

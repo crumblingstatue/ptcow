@@ -1,6 +1,6 @@
 use crate::{
     result::{ProjectReadError, ReadResult},
-    timing::{Meas, Tick, Timing, meas_to_tick, tick_to_meas},
+    timing::{Meas, NonZeroMeas, Tick, Timing, meas_to_tick, tick_to_meas},
 };
 
 /// Timing and loop points
@@ -12,13 +12,15 @@ pub struct Master {
     pub(crate) meas_num: Meas,
 }
 
-/// Where the song ends and starts repeating from
+/// Where the song ends and starts repeating from, as defined by the song.
 #[derive(Default)]
 pub struct LoopPoints {
     /// The [`Meas`] the song starts playing from when looped.
     pub repeat: Meas,
-    /// The last [`Meas`] the song plays before ending or repeating
-    pub last: Meas,
+    /// The last [`Meas`] the song plays before ending or repeating.
+    ///
+    /// If `None`, the song will last until the last event has been played.
+    pub last: Option<NonZeroMeas>,
 }
 
 impl LoopPoints {
@@ -27,7 +29,7 @@ impl LoopPoints {
     pub fn from_ticks(repeat: Tick, last: Tick, timing: Timing) -> Self {
         Self {
             repeat: tick_to_meas(repeat, timing),
-            last: tick_to_meas(last, timing),
+            last: NonZeroMeas::new(tick_to_meas(last, timing)),
         }
     }
 }
@@ -44,15 +46,11 @@ impl Default for Master {
 
 impl Master {
     pub(crate) fn get_last_tick(&self) -> Tick {
-        meas_to_tick(self.loop_points.last, self.timing)
+        self.loop_points.last.map_or(0, |last| meas_to_tick(last.get(), self.timing))
     }
 
-    pub(crate) const fn get_play_meas(&self) -> Meas {
-        if self.loop_points.last != 0 {
-            self.loop_points.last
-        } else {
-            self.meas_num
-        }
+    pub(crate) fn get_play_meas(&self) -> Meas {
+        self.loop_points.last.map_or(self.meas_num, NonZeroMeas::get)
     }
 
     pub(crate) fn adjust_meas_num(&mut self, tick: Tick) {
@@ -60,8 +58,8 @@ impl Master {
         if self.loop_points.repeat >= self.meas_num {
             self.loop_points.repeat = 0;
         }
-        if self.loop_points.last > self.meas_num {
-            self.loop_points.last = self.meas_num;
+        if self.loop_points.last.is_some_and(|last| last.get() > self.meas_num) {
+            self.loop_points.last = NonZeroMeas::new(self.meas_num);
         }
     }
 
@@ -96,7 +94,8 @@ impl Master {
         out.extend_from_slice(&self.timing.beats_per_meas.to_le_bytes());
         out.extend_from_slice(&self.timing.bpm.to_le_bytes());
         let clock_repeat: u32 = meas_to_tick(self.loop_points.repeat, self.timing);
-        let clock_last: u32 = meas_to_tick(self.loop_points.last, self.timing);
+        let clock_last: u32 =
+            self.loop_points.last.map_or(0, |last| meas_to_tick(last.get(), self.timing));
         out.extend_from_slice(&clock_repeat.to_le_bytes());
         out.extend_from_slice(&clock_last.to_le_bytes());
     }
