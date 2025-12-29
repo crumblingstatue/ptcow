@@ -80,6 +80,19 @@ pub struct Song {
     pub fmt: FmtInfo,
 }
 
+impl Song {
+    /// Recalculate the information about the length of the song
+    ///
+    /// Should be called when you changed the length of the song, or changed
+    /// the meas/tick ratio.
+    pub fn recalculate_length(&mut self) {
+        self.master.adjust_meas_num(std::cmp::max(
+            self.master.get_last_tick(),
+            self.events.get_max_tick(),
+        ));
+    }
+}
+
 /// How to moo the song
 pub struct MooInstructions {
     /// Output sample rate
@@ -207,10 +220,7 @@ pub fn read_song(
     let mut herd = Herd::default();
 
     io::read(&mut song, &mut herd, &mut ins, data)?;
-    song.master.adjust_meas_num(std::cmp::max(
-        song.master.get_last_tick(),
-        song.events.get_max_tick(),
-    ));
+    song.recalculate_length();
     rebuild_tones(
         &mut ins,
         out_sample_rate,
