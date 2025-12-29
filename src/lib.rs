@@ -37,7 +37,7 @@ pub use {
         moo::{MooPlan, StartPosPlan, current_tick, do_event, moo_prepare},
         read_song, rebuild_tones, serialize_project,
     },
-    master::Master,
+    master::{LoopPoints, Master},
     noise_builder::{NoiseDesignOscillator, NoiseTable, NoiseType, noise_to_pcm},
     overdrive::Overdrive,
     point::EnvPt,

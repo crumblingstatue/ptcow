@@ -12,6 +12,7 @@ pub struct Master {
     pub(crate) meas_num: Meas,
 }
 
+/// Where the song ends and starts repeating from
 #[derive(Default)]
 pub struct LoopPoints {
     /// The last [`Meas`] the song plays before ending or repeating
@@ -21,6 +22,8 @@ pub struct LoopPoints {
 }
 
 impl LoopPoints {
+    /// Convert [`Tick`]s into [`Meas`] loop points.
+    #[must_use]
     pub fn from_ticks(repeat: Tick, last: Tick, timing: Timing) -> Self {
         Self {
             last: tick_to_meas(last, timing),
