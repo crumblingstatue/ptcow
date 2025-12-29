@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - 2025.12.29
+
+### ptcow
+
+- (**Breaking**) Turn `MooPlan`'s `meas_end` and `meas_repeat` fields into `Option`s.
+- (**Breaking**) Turn `LoopPoints::last` into `Option<NonZeroMeas>`
+- Export `LoopPoints` type as public
+- Add `LoopPoints::from_ticks`
+
 ## 0.2.1 - 2025.12.26
 
 ### ptcow
