@@ -121,7 +121,7 @@ impl Default for Unit {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 /// A group index.
 pub struct GroupIdx(pub u8);

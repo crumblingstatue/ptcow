@@ -142,7 +142,7 @@ pub const DEFAULT_TUNING: f32 = 1.0;
 
 /// Payload of an event
 #[repr(u8)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EventPayload {
     /// Do nothing, and terminate playback if this event is encountered
     Null,
