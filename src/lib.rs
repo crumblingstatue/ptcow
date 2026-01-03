@@ -31,7 +31,7 @@ mod util {
 
 pub use {
     delay::{Delay, DelayUnit},
-    event::{EveList, Event, EventPayload, Key},
+    event::{DEFAULT_KEY, EveList, Event, EventPayload, Key},
     herd::{
         FmtInfo, FmtKind, FmtVer, Herd, MooInstructions, Song, Text,
         moo::{MooPlan, StartPosPlan, current_tick, do_event, moo_prepare},
