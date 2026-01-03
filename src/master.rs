@@ -48,8 +48,8 @@ impl Master {
     pub(crate) fn get_last_tick(&self) -> Tick {
         self.loop_points.last.map_or(0, |last| meas_to_tick(last.get(), self.timing))
     }
-
-    pub(crate) fn get_play_meas(&self) -> Meas {
+    /// Get the [`Meas`] at which playback ends
+    pub fn end_meas(&self) -> Meas {
         self.loop_points.last.map_or(self.meas_num, NonZeroMeas::get)
     }
 

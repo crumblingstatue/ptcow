@@ -266,7 +266,7 @@ fn calc_sample_num(meas_num: u32, beat_num: u32, sps: SampleRate, beat_tempo: f3
 pub fn moo_prepare(ins: &mut MooInstructions, herd: &mut Herd, song: &Song, plan: &MooPlan) {
     assert_ne!(ins.out_sample_rate, 0);
 
-    let meas_end = plan.meas_end.unwrap_or_else(|| song.master.get_play_meas());
+    let meas_end = plan.meas_end.unwrap_or_else(|| song.master.end_meas());
     let meas_repeat = plan.meas_repeat.unwrap_or(song.master.loop_points.repeat);
 
     herd.loop_ = plan.loop_;
