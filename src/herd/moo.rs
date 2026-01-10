@@ -23,14 +23,24 @@ pub fn current_tick(herd: &Herd, ins: &MooInstructions) -> Tick {
     (herd.smp_count as f32 / ins.samples_per_tick) as u32
 }
 
-#[expect(clippy::cast_possible_truncation)]
-pub(super) fn next_sample(
+pub trait OutSample {
+    fn from_moo_samp(moo_samp: i32) -> Self;
+}
+
+impl OutSample for i16 {
+    #[expect(clippy::cast_possible_truncation)]
+    fn from_moo_samp(moo_samp: i32) -> Self {
+        moo_samp.clamp(i32::from(Self::MIN), i32::from(Self::MAX)) as Self
+    }
+}
+
+pub(super) fn next_sample<T: OutSample>(
     herd: &mut Herd,
     ins: &MooInstructions,
     events: &EveList,
     master: &Master,
     dst_sps: SampleRate,
-    out: &mut [i16; 2],
+    out: &mut [T; 2],
     advance: bool,
 ) -> bool {
     for unit in &mut herd.units {
@@ -71,7 +81,7 @@ pub(super) fn next_sample(
             out_samp += group_smp;
         }
 
-        out[ch as usize] = out_samp.clamp(i32::from(i16::MIN), i32::from(i16::MAX)) as i16;
+        out[ch as usize] = T::from_moo_samp(out_samp);
     }
     if advance {
         herd.smp_count += 1;
@@ -300,11 +310,11 @@ impl Herd {
     /// If `advance` is true, the playback proceeds to the next event.
     /// Setting it to false can be useful for pausing playback, while still allowing
     /// the [`Unit`](crate::Unit)s to play audio.
-    pub fn moo(
+    pub fn moo<T: OutSample>(
         &mut self,
         ins: &MooInstructions,
         song: &Song,
-        buf: &mut [i16],
+        buf: &mut [T],
         advance: bool,
     ) -> bool {
         if self.end {
