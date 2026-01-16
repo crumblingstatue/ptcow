@@ -2,7 +2,7 @@ use crate::{
     io::write_varint,
     result::{ProjectReadError, ReadResult},
     timing::Tick,
-    unit::{GroupIdx, UnitIdx},
+    unit::{GroupIdx, UnitIdx, VoiceIdx},
 };
 
 /// List of [`Event`]s.
@@ -60,7 +60,7 @@ impl EveList {
                 9 => EventPayload::BeatNum,
                 10 => EventPayload::Repeat,
                 11 => EventPayload::Last,
-                12 => EventPayload::SetVoice(value),
+                12 => EventPayload::SetVoice(VoiceIdx(value.try_into().unwrap())),
                 13 => EventPayload::SetGroup(GroupIdx(value.try_into().unwrap())),
                 14 => EventPayload::Tuning(bytemuck::cast(value)),
                 15 => EventPayload::PanTime(value.try_into().unwrap()),
@@ -109,7 +109,7 @@ impl EveList {
                 EventPayload::BeatNum => (9, 0),
                 EventPayload::Repeat => (10, 0),
                 EventPayload::Last => (11, 0),
-                EventPayload::SetVoice(n) => (12, *n),
+                EventPayload::SetVoice(n) => (12, u32::from(n.0)),
                 EventPayload::SetGroup(g) => (13, u32::from(g.0)),
                 EventPayload::Tuning(t) => (14, t.to_bits()),
                 EventPayload::PanTime(t) => (15, u32::from(*t)),
@@ -178,7 +178,7 @@ pub enum EventPayload {
     /// Ignored. Only present for compatibility reasons.
     Last,
     /// Set the voice index of the target unit
-    SetVoice(u32),
+    SetVoice(VoiceIdx),
     /// Set the group index of the target unit
     SetGroup(GroupIdx),
     /// Set the [`tuning`](crate::Unit::tuning) property of the target unit

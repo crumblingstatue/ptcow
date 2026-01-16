@@ -45,7 +45,7 @@ pub use {
     pulse_oscillator::{coord, overtone},
     result::{ProjectReadError, ReadResult},
     timing::{Meas, SampleT, SamplesPerTick, Tick, Tick16, Timing},
-    unit::{GroupIdx, PanTimeBuf, PanTimeOff, Unit, UnitIdx},
+    unit::{GroupIdx, PanTimeBuf, PanTimeOff, Unit, UnitIdx, VoiceIdx},
     voice::{EnvelopeSrc, Voice, VoiceData, VoiceFlags, VoiceInstance, VoiceTone, VoiceUnit},
     voice_data::{
         noise::{NoiseData, NoiseDesignUnit},

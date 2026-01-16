@@ -156,7 +156,7 @@ pub fn do_event(
         | EventPayload::Repeat
         | EventPayload::Last
         | EventPayload::PtcowDebug(_) => {}
-        EventPayload::SetVoice(num) => unit.reset_voice(ins, num as usize, master.timing),
+        EventPayload::SetVoice(num) => unit.reset_voice(ins, num, master.timing),
         EventPayload::SetGroup(num) => unit.group = num,
         EventPayload::Tuning(tuning) => unit.tuning = tuning,
         EventPayload::Null => return ControlFlow::Break(()),
@@ -189,7 +189,7 @@ fn do_on_event(
     }
 
     unit.tone_key_on();
-    let Some(voice) = ins.voices.get(unit.voice_idx) else {
+    let Some(voice) = ins.voices.get(unit.voice_idx.usize()) else {
         eprintln!("Invalid voice idx");
         return;
     };

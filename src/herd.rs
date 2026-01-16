@@ -1,7 +1,14 @@
 use crate::{
-    ReadResult, SampleRate, SamplesPerTick, Timing, delay::Delay, event::EveList, master::Master,
-    noise_builder::NoiseTable, overdrive::Overdrive, result::WriteResult, timing::SampleT,
-    unit::Unit, voice::Voice,
+    ReadResult, SampleRate, SamplesPerTick, Timing,
+    delay::Delay,
+    event::EveList,
+    master::Master,
+    noise_builder::NoiseTable,
+    overdrive::Overdrive,
+    result::WriteResult,
+    timing::SampleT,
+    unit::{Unit, VoiceIdx},
+    voice::Voice,
 };
 
 mod io;
@@ -176,7 +183,7 @@ impl Herd {
     pub fn tune_cow_voices(&mut self, ins: &MooInstructions, timing: Timing) {
         for unit in &mut self.units {
             unit.tone_init();
-            unit.reset_voice(ins, 0, timing);
+            unit.reset_voice(ins, VoiceIdx(0), timing);
         }
     }
 }

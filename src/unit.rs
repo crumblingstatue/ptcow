@@ -22,6 +22,20 @@ impl UnitIdx {
     }
 }
 
+/// Voice index
+///
+/// Maximum allowed number of voices by PxTone is 100.
+#[repr(transparent)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub struct VoiceIdx(pub u8);
+impl VoiceIdx {
+    /// Get the index as a usize
+    #[must_use]
+    pub fn usize(self) -> usize {
+        usize::from(self.0)
+    }
+}
+
 pub const MAX_CHANNEL: u8 = 2;
 /// Used to make rust-analyzer happy (doesn't like as casts)
 ///
@@ -88,7 +102,7 @@ pub struct Unit {
     /// Fine tuning of the mooing frequency, where 1.0 is the normal frequency
     pub tuning: f32,
     /// Which voice the unit should be playing
-    pub voice_idx: usize,
+    pub voice_idx: VoiceIdx,
     /// The voice tones for each channel
     pub tones: [VoiceTone; MAX_CH_LEN],
     /// Whether this unit is muted
@@ -115,7 +129,7 @@ impl Default for Unit {
             group: GroupIdx::default(),
             tuning: Default::default(),
             tones: [VoiceTone::default(), VoiceTone::default()],
-            voice_idx: 0,
+            voice_idx: VoiceIdx(0),
             mute: false,
         }
     }
@@ -159,7 +173,7 @@ impl Unit {
         clippy::cast_sign_loss
     )]
     pub(crate) fn tone_envelope(&mut self, voices: &[Voice]) {
-        let Some(voice) = voices.get(self.voice_idx) else {
+        let Some(voice) = voices.get(self.voice_idx.usize()) else {
             eprintln!("Invalid voice idx");
             return;
         };
@@ -250,7 +264,7 @@ impl Unit {
     }
 
     pub(crate) fn tone_increment_sample(&mut self, freq: f32, voices: &[Voice]) {
-        let voice = &voices[self.voice_idx];
+        let voice = &voices[self.voice_idx.usize()];
 
         for ((voice_inst, voice_tone), voice_unit) in
             zip(&voice.insts, &mut self.tones).zip(&voice.units)
@@ -284,7 +298,7 @@ impl Unit {
         }
     }
 
-    pub(crate) const fn set_voice(&mut self, idx: usize) {
+    pub(crate) const fn set_voice(&mut self, idx: VoiceIdx) {
         self.voice_idx = idx;
         self.key_now = DEFAULT_KEY;
         self.key_margin = 0;
@@ -305,15 +319,15 @@ impl Unit {
     pub(crate) fn reset_voice(
         &mut self,
         ins: &MooInstructions,
-        mut voice_idx: usize,
+        mut voice_idx: VoiceIdx,
         timing: Timing,
     ) {
-        if voice_idx >= ins.voices.len() {
+        if voice_idx.usize() >= ins.voices.len() {
             eprintln!("Error: Voice index out of bounds. Setting to 0.");
-            voice_idx = 0;
+            voice_idx = VoiceIdx(0);
         }
         self.set_voice(voice_idx);
-        let Some(voice) = &ins.voices.get(voice_idx) else {
+        let Some(voice) = &ins.voices.get(voice_idx.usize()) else {
             eprintln!("Error: Song doesn't have any voices");
             return;
         };
@@ -340,7 +354,7 @@ impl Unit {
         smooth_smp: SampleRate,
         voices: &[Voice],
     ) {
-        let voice = &voices[self.voice_idx];
+        let voice = &voices[self.voice_idx.usize()];
 
         for ch in 0..i32::from(MAX_CHANNEL) {
             let mut time_pan_buf: i32 = 0;
