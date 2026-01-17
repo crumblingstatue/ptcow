@@ -48,7 +48,7 @@ impl NoiseData {
             design_unit = &mut self.units[u as usize];
             #[expect(clippy::cast_possible_truncation)]
             let flags = NoiseDesignUnitFlags::from_bits_retain(rd.next_varint()? as u8);
-            design_unit.io_flags = flags;
+            design_unit.ser_flags = flags;
 
             if flags.contains_unknown_bits() {
                 return Err(ProjectReadError::FmtUnknown);
@@ -94,8 +94,8 @@ impl NoiseData {
         let unit_num: u8 = self.units.len().try_into().unwrap();
         out.push(unit_num);
         for unit in &self.units {
-            write_varint(unit.io_flags.bits().into(), out);
-            if unit.io_flags.contains(NoiseDesignUnitFlags::ENVELOPE) {
+            write_varint(unit.ser_flags.bits().into(), out);
+            if unit.ser_flags.contains(NoiseDesignUnitFlags::ENVELOPE) {
                 let enve_num: u32 = unit.enves.len().try_into().unwrap();
                 write_varint(enve_num, out);
                 for pt in &unit.enves {
@@ -103,16 +103,16 @@ impl NoiseData {
                     write_varint(pt.y.into(), out);
                 }
             }
-            if unit.io_flags.contains(NoiseDesignUnitFlags::PAN) {
+            if unit.ser_flags.contains(NoiseDesignUnitFlags::PAN) {
                 out.push(unit.pan.cast_unsigned());
             }
-            if unit.io_flags.contains(NoiseDesignUnitFlags::OSC_MAIN) {
+            if unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_MAIN) {
                 write_oscillator(&unit.main, out);
             }
-            if unit.io_flags.contains(NoiseDesignUnitFlags::OSC_FREQ) {
+            if unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_FREQ) {
                 write_oscillator(&unit.freq, out);
             }
-            if unit.io_flags.contains(NoiseDesignUnitFlags::OSC_VOLU) {
+            if unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_VOLU) {
                 write_oscillator(&unit.volu, out);
             }
         }
@@ -236,18 +236,27 @@ pub struct NoiseDesignUnit {
     pub freq: NoiseDesignOscillator,
     /// Volume oscillator
     pub volu: NoiseDesignOscillator,
-    /// Currently only used for serialization
-    /// TODO: Possibly can be generated instead
-    pub(crate) io_flags: NoiseDesignUnitFlags,
+    /// What fields to serialize
+    // TODO: Maybe it could be inferred, but at this point I'm not sure
+    // how to determine which fields to serialize.
+    // Turning the fields into `Option` didn't quite work out, as it seems
+    // the fields are treated as non-optional in a lot of cases.
+    pub ser_flags: NoiseDesignUnitFlags,
 }
 
 bitflags::bitflags! {
+    /// What attributes of [`NoiseDesignUnit`] to serialize
     #[derive(Clone, Copy, Default)]
-    pub(crate) struct NoiseDesignUnitFlags: u8 {
+    pub struct NoiseDesignUnitFlags: u8 {
+        /// Serialize the envelopes
         const ENVELOPE = 0x04;
+        /// Serialize the panning
         const PAN = 0x08;
+        /// Serialize the main oscillator
         const OSC_MAIN = 0x10;
+        /// Serialize the frequency oscillator
         const OSC_FREQ = 0x20;
+        /// Serialize the volume oscillator
         const OSC_VOLU = 0x40;
     }
 }

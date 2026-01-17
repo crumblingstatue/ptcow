@@ -48,7 +48,7 @@ pub use {
     unit::{GroupIdx, PanTimeBuf, PanTimeOff, Unit, UnitIdx, VoiceIdx},
     voice::{EnvelopeSrc, Voice, VoiceData, VoiceFlags, VoiceInstance, VoiceTone, VoiceUnit},
     voice_data::{
-        noise::{NoiseData, NoiseDesignUnit},
+        noise::{NoiseData, NoiseDesignUnit, NoiseDesignUnitFlags},
         oggv::OggVData,
         pcm::PcmData,
         wave::WaveData,
