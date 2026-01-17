@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 - 2026.01.17
+
+### ptcow
+
+- (**Breaking**) Add `VoiceIdx` type for voice indices
+- (**Breaking**) Rename `Master::get_play_meas` to `end_meas` and make it public
+- Add `Song::recalculate_length`
+- Use bitflags for `NoiseDesignUnit`'s io flags, and make it public
+- Publicly export `DEFAULT_KEY`
+- Add some useful derives
+- Make sample type on `moo` generic
+- Make `Unit::reset_voice` public
+
 ## 0.3.0 - 2025.12.29
 
 ### ptcow
