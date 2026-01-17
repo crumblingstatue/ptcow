@@ -107,7 +107,7 @@ impl Voice {
     }
 
     pub(crate) fn read_mate_ptn(&mut self, rd: &mut crate::io::Reader) -> ReadResult {
-        let size = rd.next::<u32>()?;
+        let _size = rd.next::<u32>()?;
         let ptn = rd.next::<IoPtn>()?;
 
         if ptn.rrr > 1 || ptn.rrr < 0 {
@@ -118,7 +118,6 @@ impl Voice {
         noise_data.read(rd)?;
         self.allocate::<false>();
         let vu = &mut self.units[0];
-        noise_data.io_size = size;
         vu.data = VoiceData::Noise(noise_data);
         vu.flags = ptn.voice_flags;
         vu.basic_key = i32::from(ptn.basic_key);
@@ -129,7 +128,9 @@ impl Voice {
 
     pub(crate) fn write_mate_ptn(&self, out: &mut Vec<u8>, data: &NoiseData) {
         out.extend_from_slice(Tag::MatePTN.to_code());
-        out.extend_from_slice(&data.io_size.to_le_bytes());
+        let io_size_pos = out.len();
+        // Placeholder for io size
+        out.extend_from_slice(&[0; 4]);
         let vu = &self.units[0];
         let ptn = IoPtn {
             x3x_unit_no: 0,
@@ -140,6 +141,9 @@ impl Voice {
         };
         out.extend_from_slice(bytemuck::bytes_of(&ptn));
         data.write(out);
+        // Write io size retroactively
+        let bytes_written: u32 = (out.len() - (io_size_pos + 4)).try_into().unwrap();
+        out[io_size_pos..io_size_pos + 4].copy_from_slice(&bytes_written.to_le_bytes());
     }
 
     pub(crate) fn read_mate_ptv(&mut self, rd: &mut crate::io::Reader) -> ReadResult {

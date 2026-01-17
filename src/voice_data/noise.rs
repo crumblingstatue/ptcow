@@ -15,8 +15,6 @@ pub struct NoiseData {
     pub smp_num_44k: u32,
     /// Noise design units that are mixed together to generate the final waveform
     pub units: ArrayVec<NoiseDesignUnit, 4>,
-    /// Only used for serialization
-    pub(crate) io_size: u32,
 }
 
 #[expect(clippy::inconsistent_digit_grouping)]
