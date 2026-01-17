@@ -1,4 +1,5 @@
 use arrayvec::ArrayVec;
+use bitflags::Flags;
 
 use crate::{
     EnvPt, NATIVE_SAMPLE_RATE,
@@ -47,14 +48,15 @@ impl NoiseData {
         }
         for u in 0..unit_num {
             design_unit = &mut self.units[u as usize];
-            let flags = rd.next_varint()?;
+            #[expect(clippy::cast_possible_truncation)]
+            let flags = NoiseDesignUnitFlags::from_bits_retain(rd.next_varint()? as u8);
             design_unit.io_flags = flags;
 
-            if flags & NOISEEDITFLAG_UNCOVERED != 0 {
+            if flags.contains_unknown_bits() {
                 return Err(ProjectReadError::FmtUnknown);
             }
 
-            if flags & NOISEEDITFLAG_ENVELOPE != 0 {
+            if flags.contains(NoiseDesignUnitFlags::ENVELOPE) {
                 let enve_num = rd.next_varint()? as usize;
                 if enve_num > MAX_NOISEEDITENVELOPENUM {
                     return Err(ProjectReadError::FmtUnknown);
@@ -67,17 +69,17 @@ impl NoiseData {
                     });
                 }
             }
-            if flags & NOISEEDITFLAG_PAN != 0 {
+            if flags.contains(NoiseDesignUnitFlags::PAN) {
                 design_unit.pan = rd.next::<i8>()?;
             }
 
-            if flags & NOISEEDITFLAG_OSC_MAIN != 0 {
+            if flags.contains(NoiseDesignUnitFlags::OSC_MAIN) {
                 read_oscillator(&mut design_unit.main, rd)?;
             }
-            if flags & NOISEEDITFLAG_OSC_FREQ != 0 {
+            if flags.contains(NoiseDesignUnitFlags::OSC_FREQ) {
                 read_oscillator(&mut design_unit.freq, rd)?;
             }
-            if flags & NOISEEDITFLAG_OSC_VOLU != 0 {
+            if flags.contains(NoiseDesignUnitFlags::OSC_VOLU) {
                 read_oscillator(&mut design_unit.volu, rd)?;
             }
         }
@@ -94,8 +96,8 @@ impl NoiseData {
         let unit_num: u8 = self.units.len().try_into().unwrap();
         out.push(unit_num);
         for unit in &self.units {
-            write_varint(unit.io_flags, out);
-            if unit.io_flags & NOISEEDITFLAG_ENVELOPE != 0 {
+            write_varint(unit.io_flags.bits().into(), out);
+            if unit.io_flags.contains(NoiseDesignUnitFlags::ENVELOPE) {
                 let enve_num: u32 = unit.enves.len().try_into().unwrap();
                 write_varint(enve_num, out);
                 for pt in &unit.enves {
@@ -103,16 +105,16 @@ impl NoiseData {
                     write_varint(pt.y.into(), out);
                 }
             }
-            if unit.io_flags & NOISEEDITFLAG_PAN != 0 {
+            if unit.io_flags.contains(NoiseDesignUnitFlags::PAN) {
                 out.push(unit.pan.cast_unsigned());
             }
-            if unit.io_flags & NOISEEDITFLAG_OSC_MAIN != 0 {
+            if unit.io_flags.contains(NoiseDesignUnitFlags::OSC_MAIN) {
                 write_oscillator(&unit.main, out);
             }
-            if unit.io_flags & NOISEEDITFLAG_OSC_FREQ != 0 {
+            if unit.io_flags.contains(NoiseDesignUnitFlags::OSC_FREQ) {
                 write_oscillator(&unit.freq, out);
             }
-            if unit.io_flags & NOISEEDITFLAG_OSC_VOLU != 0 {
+            if unit.io_flags.contains(NoiseDesignUnitFlags::OSC_VOLU) {
                 write_oscillator(&unit.volu, out);
             }
         }
@@ -149,15 +151,6 @@ impl NoiseData {
 }
 
 const MAX_NOISEEDITENVELOPENUM: usize = 3;
-//const NOISEEDITFLAG_XX1: u32 = 0x0001;
-//const NOISEEDITFLAG_XX2: u32 = 0x0002;
-const NOISEEDITFLAG_ENVELOPE: u32 = 0x0004;
-const NOISEEDITFLAG_PAN: u32 = 0x0008;
-const NOISEEDITFLAG_OSC_MAIN: u32 = 0x0010;
-const NOISEEDITFLAG_OSC_FREQ: u32 = 0x0020;
-const NOISEEDITFLAG_OSC_VOLU: u32 = 0x0040;
-//const NOISEEDITFLAG_OSC_PAN: u32 = 0x0080;
-const NOISEEDITFLAG_UNCOVERED: u32 = 0xffff_ff83;
 
 const NOISEDESIGNLIMIT_SMPNUM: u32 = 48000 * 10;
 const NOISEDESIGNLIMIT_ENVE_X: u16 = 1000 * 10;
@@ -247,5 +240,16 @@ pub struct NoiseDesignUnit {
     pub volu: NoiseDesignOscillator,
     /// Currently only used for serialization
     /// TODO: Possibly can be generated instead
-    pub(crate) io_flags: u32,
+    pub(crate) io_flags: NoiseDesignUnitFlags,
+}
+
+bitflags::bitflags! {
+    #[derive(Clone, Copy, Default)]
+    pub(crate) struct NoiseDesignUnitFlags: u8 {
+        const ENVELOPE = 0x04;
+        const PAN = 0x08;
+        const OSC_MAIN = 0x10;
+        const OSC_FREQ = 0x20;
+        const OSC_VOLU = 0x40;
+    }
 }
