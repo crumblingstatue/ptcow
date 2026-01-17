@@ -311,17 +311,13 @@ impl Unit {
             ..Default::default()
         }
     }
+    /// Reset the unit's voice to the voice indexed by `voice_idx`
     #[expect(
         clippy::cast_precision_loss,
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss
     )]
-    pub(crate) fn reset_voice(
-        &mut self,
-        ins: &MooInstructions,
-        mut voice_idx: VoiceIdx,
-        timing: Timing,
-    ) {
+    pub fn reset_voice(&mut self, ins: &MooInstructions, mut voice_idx: VoiceIdx, timing: Timing) {
         if voice_idx.usize() >= ins.voices.len() {
             eprintln!("Error: Voice index out of bounds. Setting to 0.");
             voice_idx = VoiceIdx(0);
