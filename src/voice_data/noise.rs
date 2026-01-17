@@ -94,25 +94,30 @@ impl NoiseData {
         let unit_num: u8 = self.units.len().try_into().unwrap();
         out.push(unit_num);
         for unit in &self.units {
-            write_varint(unit.ser_flags.bits().into(), out);
-            if unit.ser_flags.contains(NoiseDesignUnitFlags::ENVELOPE) {
-                let enve_num: u32 = unit.enves.len().try_into().unwrap();
-                write_varint(enve_num, out);
-                for pt in &unit.enves {
-                    write_varint(pt.x.into(), out);
-                    write_varint(pt.y.into(), out);
-                }
+            let mut ser_flags = unit.ser_flags;
+            // We always serialize the envelope (seems to be PxTone behavior)
+            ser_flags.insert(NoiseDesignUnitFlags::ENVELOPE);
+            // We write the pan if it's not 0
+            if unit.pan != 0 {
+                ser_flags.insert(NoiseDesignUnitFlags::PAN);
             }
-            if unit.ser_flags.contains(NoiseDesignUnitFlags::PAN) {
+            write_varint(ser_flags.bits().into(), out);
+            let enve_num: u32 = unit.enves.len().try_into().unwrap();
+            write_varint(enve_num, out);
+            for pt in &unit.enves {
+                write_varint(pt.x.into(), out);
+                write_varint(pt.y.into(), out);
+            }
+            if ser_flags.contains(NoiseDesignUnitFlags::PAN) {
                 out.push(unit.pan.cast_unsigned());
             }
-            if unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_MAIN) {
+            if ser_flags.contains(NoiseDesignUnitFlags::OSC_MAIN) {
                 write_oscillator(&unit.main, out);
             }
-            if unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_FREQ) {
+            if ser_flags.contains(NoiseDesignUnitFlags::OSC_FREQ) {
                 write_oscillator(&unit.freq, out);
             }
-            if unit.ser_flags.contains(NoiseDesignUnitFlags::OSC_VOLU) {
+            if ser_flags.contains(NoiseDesignUnitFlags::OSC_VOLU) {
                 write_oscillator(&unit.volu, out);
             }
         }
