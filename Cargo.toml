@@ -10,7 +10,11 @@ rust-version = "1.88"
 
 [features]
 default = ["oggv"]
-oggv = ["dep:vorbis_rs"]
+oggv = [
+    "dep:symphonia-core",
+    "dep:symphonia-format-ogg",
+    "dep:symphonia-codec-vorbis",
+]
 
 [dependencies]
 arrayvec = "0.7.6"
@@ -18,9 +22,12 @@ bitflags.workspace = true
 bytemuck.workspace = true
 encoding_rs = "0.8"
 thiserror = "2"
-vorbis_rs.version = "0.5.5"
-vorbis_rs.optional = true
-vorbis_rs.default-features = false
+symphonia-core.optional = true
+symphonia-core.version = "0.5.5"
+symphonia-format-ogg.optional = true
+symphonia-format-ogg.version = "0.5.5"
+symphonia-codec-vorbis.optional = true
+symphonia-codec-vorbis.version = "0.5.5"
 
 [profile.dev]
 debug = "line-tables-only"

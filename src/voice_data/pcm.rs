@@ -143,7 +143,7 @@ impl PcmData {
 
         let sample_num = work_size / 4;
         work_size = sample_num * 4;
-        let as_u32 = bytemuck::cast_slice::<_, u32>(&self.smp);
+        let as_u32 = bytemuck::pod_collect_to_vec::<_, u32>(&self.smp);
         let mut u32_buf: Vec<u32> = vec![0; work_size as usize];
         for (i, u32_samp) in u32_buf.iter_mut().take(sample_num as usize).enumerate() {
             let idx = i * self.sps as usize / usize::from(new_sps);
