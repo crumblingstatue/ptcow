@@ -174,7 +174,6 @@ impl Unit {
     )]
     pub(crate) fn tone_envelope(&mut self, voices: &[Voice]) {
         let Some(voice) = voices.get(self.voice_idx.usize()) else {
-            eprintln!("Invalid voice idx");
             return;
         };
 
@@ -264,7 +263,11 @@ impl Unit {
     }
 
     pub(crate) fn tone_increment_sample(&mut self, freq: f32, voices: &[Voice]) {
-        let voice = &voices[self.voice_idx.usize()];
+        let Some(voice) = voices.get(self.voice_idx.usize()) else {
+            // If for some reason there is no voice, we just don't do anything
+            // instead of panicking
+            return;
+        };
 
         for ((voice_inst, voice_tone), voice_unit) in
             zip(&voice.insts, &mut self.tones).zip(&voice.units)
@@ -350,7 +353,11 @@ impl Unit {
         smooth_smp: SampleRate,
         voices: &[Voice],
     ) {
-        let voice = &voices[self.voice_idx.usize()];
+        let Some(voice) = &voices.get(self.voice_idx.usize()) else {
+            // If for whatever reason there is no voice, we just don't produce any output
+            // instead of panicking
+            return;
+        };
 
         for ch in 0..i32::from(MAX_CHANNEL) {
             let mut time_pan_buf: i32 = 0;

@@ -190,7 +190,6 @@ fn do_on_event(
 
     unit.tone_key_on();
     let Some(voice) = ins.voices.get(unit.voice_idx.usize()) else {
-        eprintln!("Invalid voice idx");
         return;
     };
     for (inst, tone) in zip(&voice.insts, &mut unit.tones) {
