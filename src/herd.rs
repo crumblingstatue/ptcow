@@ -149,7 +149,10 @@ pub fn rebuild_tones(
 /// The glorious cows that are going to moo your song
 #[derive(Default)]
 pub struct Herd {
-    end: bool,
+    /// If true, [`Self::moo`] won't do anything
+    ///
+    /// Usually set after a song without `loop` finished playing.
+    pub moo_end: bool,
     loop_: bool,
     smp_smooth: SampleRate,
     /// Counter variable for what sample we are at

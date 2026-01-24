@@ -316,7 +316,7 @@ impl Herd {
         buf: &mut [T],
         advance: bool,
     ) -> bool {
-        if self.end {
+        if self.moo_end {
             return false;
         }
 
@@ -330,7 +330,7 @@ impl Herd {
                 out_samp,
                 advance,
             ) {
-                self.end = true;
+                self.moo_end = true;
                 break;
             }
         }
