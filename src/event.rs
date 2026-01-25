@@ -6,6 +6,11 @@ use crate::{
 };
 
 /// List of [`Event`]s.
+///
+/// INVARIANT: ptcow's playback code assumes that events are sorted
+/// by tick value in ascending order.
+/// Use [`Self::sort`] after you made modifications to the event list,
+/// to ensure correct playback.
 #[derive(Default)]
 pub struct EveList {
     /// The inner list of events
@@ -123,6 +128,10 @@ impl EveList {
             eve_num += 1;
         }
         out[eve_num_offset..eve_num_offset + 4].copy_from_slice(&eve_num.to_le_bytes());
+    }
+    /// Sort the events by their tick values, to ensure correct playback.
+    pub fn sort(&mut self) {
+        self.eves.sort_by_key(|eve| eve.tick);
     }
 }
 
