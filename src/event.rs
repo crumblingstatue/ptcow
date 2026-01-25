@@ -135,6 +135,20 @@ impl EveList {
     }
 }
 
+impl std::ops::Deref for EveList {
+    type Target = Vec<Event>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.eves
+    }
+}
+
+impl std::ops::DerefMut for EveList {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.eves
+    }
+}
+
 const fn event_duration(payload: EventPayload) -> Option<u32> {
     match payload {
         EventPayload::On { duration } | EventPayload::Portament { duration } => Some(duration),
