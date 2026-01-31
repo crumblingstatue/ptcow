@@ -362,7 +362,8 @@ fn write_units(out: &mut Vec<u8>, herd: &Herd) {
         out.extend_from_slice(&size.to_le_bytes());
         let shift_jis = SHIFT_JIS.encode(&unit.name);
         let mut name: [u8; MAX_TUNE_UNIT_NAME] = [0; _];
-        name[..shift_jis.0.len()].copy_from_slice(&shift_jis.0);
+        let max_len = std::cmp::min(shift_jis.0.len(), MAX_TUNE_UNIT_NAME);
+        name[..max_len].copy_from_slice(&shift_jis.0[..max_len]);
         let io_unit = IoUnit {
             unit_index: i.try_into().unwrap(),
             rrr: 0,
