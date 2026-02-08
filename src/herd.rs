@@ -12,6 +12,7 @@ use crate::{
 };
 
 mod io;
+use arrayvec::ArrayVec;
 pub use io::Tag;
 pub mod moo;
 
@@ -168,12 +169,16 @@ pub struct Herd {
     pub evt_idx: usize,
     /// The 🐄 cow units that drive music synthesis. Each one outputs a PCM stream that's mixed
     /// together for a final result.
-    pub units: Vec<Unit>,
+    pub units: Box<Units>,
     /// Delay (reverb) effects
-    pub delays: Vec<Delay>,
+    pub delays: Delays,
     /// Overdrive (amplify + clip) effects
-    pub overdrives: Vec<Overdrive>,
+    pub overdrives: Overdrives,
 }
+
+pub type Delays = ArrayVec<Delay, 4>;
+pub type Overdrives = ArrayVec<Overdrive, 2>;
+pub type Units = ArrayVec<Unit, 50>;
 
 impl Herd {
     /// Seek to sample count
@@ -184,7 +189,7 @@ impl Herd {
     }
     /// Make sure all the cows' voices are ready for playback
     pub fn tune_cow_voices(&mut self, ins: &MooInstructions, timing: Timing) {
-        for unit in &mut self.units {
+        for unit in &mut *self.units {
             unit.tone_init();
             unit.reset_voice(ins, VoiceIdx(0), timing);
         }

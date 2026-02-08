@@ -4,7 +4,7 @@ use crate::{
     delay::{Delay, DelayUnit},
     event::EveList,
     herd::{
-        FmtInfo, FmtKind, FmtVer, Herd, MAX_TUNE_UNIT_NAME, MAX_TUNE_VOICE_NAME, MAX_UNITS,
+        Delays, FmtInfo, FmtKind, FmtVer, Herd, MAX_TUNE_UNIT_NAME, MAX_TUNE_VOICE_NAME, MAX_UNITS,
         MooInstructions, Song,
     },
     io::{ReadError, Reader},
@@ -164,7 +164,7 @@ struct IoDelay {
     freq: f32,
 }
 
-fn read_delay(rd: &mut Reader, delays: &mut Vec<Delay>) -> ReadResult {
+fn read_delay(rd: &mut Reader, delays: &mut Delays) -> ReadResult {
     let size: u32 = rd.next()?;
     if size as usize != size_of::<IoDelay>() {
         return Err(ProjectReadError::FmtUnknown);
