@@ -224,6 +224,7 @@ pub struct VoiceTone {
 }
 
 /// Audio data that gives [`Unit`](crate::Unit)s a voice. In other words, an instrument.
+#[derive(Clone)]
 pub struct Voice {
     /// Mostly static data required to generate the voice samples
     pub units: ArrayVec<VoiceUnit, 2>,
