@@ -1,4 +1,4 @@
-use std::iter::zip;
+use std::{iter::zip, ops::RangeInclusive};
 
 use crate::{
     Key, MooInstructions, NATIVE_SAMPLE_RATE, SampleRate, SampleT, Timing,
@@ -223,14 +223,8 @@ impl Unit {
         }
     }
 
-    pub(crate) fn tone_pan_time(&mut self, offset: u8, sps: SampleRate) {
-        if offset >= 64 {
-            self.pan_time_offs[0] = calc_pan_time(offset - 64, sps);
-            self.pan_time_offs[1] = 0;
-        } else {
-            self.pan_time_offs[0] = 0;
-            self.pan_time_offs[1] = calc_pan_time(64 - offset, sps);
-        }
+    pub(crate) fn tone_pan_time(&mut self, pan_time: PanTime, sps: SampleRate) {
+        self.pan_time_offs = pan_time.to_lr_offsets(sps);
     }
 
     pub(crate) const fn tone_supple(
@@ -410,4 +404,56 @@ fn calc_pan_time(mut offset: u8, out_sps: SampleRate) -> u8 {
     ((u32::from(offset) * u32::from(NATIVE_SAMPLE_RATE)) / u32::from(out_sps))
         .try_into()
         .unwrap_or(0)
+}
+
+/// Inverse of `calc_pan_time`
+fn inv_calc_pan_time(val: u8, sps: SampleRate) -> u8 {
+    if val == 0 {
+        return 0;
+    }
+
+    ((u32::from(val) * u32::from(sps)) / u32::from(NATIVE_SAMPLE_RATE)).min(63) as u8
+}
+
+/// Sets an effect where the left and right audio channels for the unit are sampled at different
+/// offsets.
+///
+/// Range is within `0..128`.
+#[repr(transparent)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PanTime(pub u8);
+
+impl Default for PanTime {
+    fn default() -> Self {
+        Self(64)
+    }
+}
+
+impl PanTime {
+    /// The valid range of values for pan time
+    pub const RANGE: RangeInclusive<u8> = 0..=127;
+    /// Calculate the pantime from the raw left and right offsets
+    #[must_use]
+    pub fn from_lr_offsets(offs: [u8; 2], sps: SampleRate) -> Self {
+        match offs {
+            [l, 0] if l > 0 => {
+                let off = inv_calc_pan_time(l, sps);
+                Self(64 + off)
+            }
+            [0, r] if r > 0 => {
+                let off = inv_calc_pan_time(r, sps);
+                Self(64 - off)
+            }
+            _ => Self(64),
+        }
+    }
+    /// Convert the pan time to left and right offsets
+    #[must_use]
+    pub fn to_lr_offsets(self, sps: SampleRate) -> [u8; 2] {
+        if self.0 >= 64 {
+            [calc_pan_time(self.0 - 64, sps), 0]
+        } else {
+            [0, calc_pan_time(64 - self.0, sps)]
+        }
+    }
 }

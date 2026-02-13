@@ -2,7 +2,7 @@ use crate::{
     io::write_varint,
     result::{ProjectReadError, ReadResult},
     timing::Tick,
-    unit::{GroupIdx, UnitIdx, VoiceIdx},
+    unit::{GroupIdx, PanTime, UnitIdx, VoiceIdx},
 };
 
 /// List of [`Event`]s.
@@ -68,7 +68,7 @@ impl EveList {
                 12 => EventPayload::SetVoice(VoiceIdx(value.try_into().unwrap())),
                 13 => EventPayload::SetGroup(GroupIdx(value.try_into().unwrap())),
                 14 => EventPayload::Tuning(bytemuck::cast(value)),
-                15 => EventPayload::PanTime(value.try_into().unwrap()),
+                15 => EventPayload::PanTime(PanTime(value.try_into().unwrap())),
                 _ => return Err(ProjectReadError::InvalidData),
             };
             absolute += clock;
@@ -117,7 +117,7 @@ impl EveList {
                 EventPayload::SetVoice(n) => (12, u32::from(n.0)),
                 EventPayload::SetGroup(g) => (13, u32::from(g.0)),
                 EventPayload::Tuning(t) => (14, t.to_bits()),
-                EventPayload::PanTime(t) => (15, u32::from(*t)),
+                EventPayload::PanTime(t) => (15, u32::from(t.0)),
                 EventPayload::PtcowDebug(_) => {
                     // We ignore debug events
                     continue;
@@ -206,11 +206,8 @@ pub enum EventPayload {
     SetGroup(GroupIdx),
     /// Set the [`tuning`](crate::Unit::tuning) property of the target unit
     Tuning(f32),
-    /// Sets an effect where the left and right audio channels for the unit are sampled at different
-    /// offsets.
-    ///
-    /// Range is within `0..64`.
-    PanTime(u8),
+    /// Set the [`PanTime`] for the target unit
+    PanTime(PanTime),
     /// This event is ignored during playback, but you can insert it into the event stream for
     /// debugging purposes, because it can show in a GUI event viewer for example.
     PtcowDebug(i32),
