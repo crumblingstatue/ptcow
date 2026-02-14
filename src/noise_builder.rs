@@ -454,19 +454,42 @@ fn fill_saw3(bld: &mut NoiseTable) {
     let mut chunker = Chunker::new(&mut bld.inner[NoiseType::Saw3 as usize]);
     chunker.next_until::<{ SMP_NUM_U / 3 }>().fill(SAMPLING_TOP);
     chunker.next_until::<{ SMP_NUM_U * 2 / 3 }>().fill(0);
-    chunker.rest().fill(-SAMPLING_TOP);
+    let rem = SMP_NUM_U - chunker.head;
+    chunker.rest()[..rem].fill(-SAMPLING_TOP);
 }
 
 fn fill_saw4(bld: &mut NoiseTable) {
-    let mut chunker = Chunker::new(&mut bld.inner[NoiseType::Saw4 as usize]);
+    /*let mut chunker = Chunker::new(&mut bld.inner[NoiseType::Saw4 as usize]);
     chunker.next_until::<{ SMP_NUM_U / 4 }>().fill(SAMPLING_TOP);
     chunker.next_until::<{ SMP_NUM_U * 2 / 4 }>().fill(SAMPLING_TOP / 3);
     chunker.next_until::<{ SMP_NUM_U * 3 / 4 }>().fill(-SAMPLING_TOP / 3);
-    chunker.rest().fill(-SAMPLING_TOP);
+    chunker.rest().fill(-SAMPLING_TOP);*/
+    let mut slice = &mut *bld.inner[NoiseType::Saw4 as usize];
+    let mut s = 0;
+    while s < SMP_NUM_U / 4 {
+        slice[0] = SAMPLING_TOP;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 2 / 4 {
+        slice[0] = SAMPLING_TOP / 3;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 3 / 4 {
+        slice[0] = -SAMPLING_TOP / 3;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U {
+        slice[0] = -SAMPLING_TOP;
+        slice = &mut slice[1..];
+        s += 1;
+    }
 }
 
 fn fill_saw6(bld: &mut NoiseTable) {
-    let mut chunker = Chunker::new(&mut bld.inner[NoiseType::Saw6 as usize]);
+    /*let mut chunker = Chunker::new(&mut bld.inner[NoiseType::Saw6 as usize]);
     chunker.next_until::<{ SMP_NUM_U / 6 }>().fill(SAMPLING_TOP);
     chunker
         .next_until::<{ SMP_NUM_U * 2 / 6 }>()
@@ -476,11 +499,43 @@ fn fill_saw6(bld: &mut NoiseTable) {
     chunker
         .next_until::<{ SMP_NUM_U * 5 / 6 }>()
         .fill(-SAMPLING_TOP + SAMPLING_TOP.wrapping_mul(2) / 5);
-    chunker.rest().fill(-SAMPLING_TOP);
+    chunker.rest().fill(-SAMPLING_TOP);*/
+    let mut slice = &mut *bld.inner[NoiseType::Saw6 as usize];
+    let mut s = 0;
+    while s < SMP_NUM_U / 6 {
+        slice[0] = SAMPLING_TOP;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 2 / 6 {
+        slice[0] = SAMPLING_TOP - SAMPLING_TOP.wrapping_mul(2) / 5;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 3 / 6 {
+        slice[0] = SAMPLING_TOP / 5;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 4 / 6 {
+        slice[0] = -SAMPLING_TOP / 5;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 5 / 6 {
+        slice[0] = -SAMPLING_TOP + SAMPLING_TOP.wrapping_mul(2) / 5;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U {
+        slice[0] = -SAMPLING_TOP;
+        slice = &mut slice[1..];
+        s += 1;
+    }
 }
 
 fn fill_saw8(bld: &mut NoiseTable) {
-    let mut chunker = Chunker::new(&mut bld.inner[NoiseType::Saw8 as usize]);
+    /*let mut chunker = Chunker::new(&mut bld.inner[NoiseType::Saw8 as usize]);
     chunker.next_until::<{ SMP_NUM_U / 8 }>().fill(SAMPLING_TOP);
     chunker
         .next_until::<{ SMP_NUM_U * 2 / 8 }>()
@@ -496,7 +551,49 @@ fn fill_saw8(bld: &mut NoiseTable) {
     chunker
         .next_until::<{ SMP_NUM_U * 7 / 8 }>()
         .fill(-SAMPLING_TOP + SAMPLING_TOP.wrapping_mul(2) / 7);
-    chunker.rest().fill(-SAMPLING_TOP);
+    chunker.rest().fill(-SAMPLING_TOP);*/
+    let mut slice = &mut *bld.inner[NoiseType::Saw8 as usize];
+    let mut s = 0;
+    while s < SMP_NUM_U / 8 {
+        slice[0] = SAMPLING_TOP;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 2 / 8 {
+        slice[0] = SAMPLING_TOP - SAMPLING_TOP.wrapping_mul(2) / 7;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 3 / 8 {
+        slice[0] = SAMPLING_TOP - SAMPLING_TOP.wrapping_mul(4) / 7;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 4 / 8 {
+        slice[0] = SAMPLING_TOP / 7;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 5 / 8 {
+        slice[0] = -SAMPLING_TOP / 7;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 6 / 8 {
+        slice[0] = -SAMPLING_TOP + SAMPLING_TOP.wrapping_mul(4) / 7;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U * 7 / 8 {
+        slice[0] = -SAMPLING_TOP + SAMPLING_TOP.wrapping_mul(2) / 7;
+        slice = &mut slice[1..];
+        s += 1;
+    }
+    while s < SMP_NUM_U {
+        slice[0] = -SAMPLING_TOP;
+        slice = &mut slice[1..];
+        s += 1;
+    }
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Default)]
