@@ -37,12 +37,19 @@ impl PulseFrequency {
         }
         Self { table }
     }
-    pub const fn get(&self, key: usize) -> f32 {
-        let mut i = (key.wrapping_add(0x6000)).wrapping_mul(FREQUENCY_PER_KEY as usize) / 0x100;
-        if i >= TABLE_SIZE {
-            i = TABLE_SIZE - 1;
+    #[expect(
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_sign_loss
+    )]
+    pub const fn get(&self, key: i32) -> f32 {
+        let mut i = (key.wrapping_add(0x6000)).wrapping_mul(FREQUENCY_PER_KEY as i32) / 0x100;
+        if i < 0 {
+            i = 0;
+        } else if i >= TABLE_SIZE as i32 {
+            i = TABLE_SIZE as i32 - 1;
         }
-        self.table[i]
+        self.table[i as usize]
     }
     pub const fn get2(&self, key: usize) -> f32 {
         let mut i = key >> 4;

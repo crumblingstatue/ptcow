@@ -392,9 +392,8 @@ fn build_unit_noise(unit: &mut NoiseBuilderUnit<'_>, rand_tbl: &[i16]) {
         fre *= -1.0;
     }
     fre *= unit.freq.volume;
-
     unit.main.increment(
-        unit.main.incriment * f64::from(PULSE_FREQ.get(fre as i32 as usize)),
+        unit.main.incriment * f64::from(PULSE_FREQ.get(fre as i32)),
         rand_tbl,
     );
     unit.freq.increment(unit.freq.incriment, rand_tbl);
