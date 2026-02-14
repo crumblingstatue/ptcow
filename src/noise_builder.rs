@@ -80,7 +80,6 @@ impl Default for NoiseTable {
 impl NoiseTable {
     /// Generate a new [`NoiseTable`].
     #[expect(clippy::cast_possible_truncation, reason = "f64 to i16 casts")]
-    #[expect(clippy::missing_panics_doc)]
     #[must_use]
     pub fn generate() -> Self {
         let overtones_sine = [pt(1, 128)];
@@ -155,11 +154,15 @@ impl NoiseTable {
             *p = (f64::from(SAMPLING_TOP) - st2 * f64::from(s) / f64::from(SMP_NUM)) as i16;
         }
 
-        let (fst, snd) = this.inner[NoiseType::Rect as usize]
-            .split_first_chunk_mut::<{ SMP_NUM_U / 2 }>()
-            .unwrap();
-        fst.fill(SAMPLING_TOP);
-        snd.fill(-SAMPLING_TOP);
+        let mut s = 0;
+        while s < SMP_NUM / 2 {
+            this.inner[NoiseType::Rect as usize][s as usize] = SAMPLING_TOP;
+            s += 1;
+        }
+        while s < SMP_NUM {
+            this.inner[NoiseType::Rect as usize][s as usize] = -SAMPLING_TOP;
+            s += 1;
+        }
 
         let mut rng = Rng::default();
         this.inner[NoiseType::Random as usize]
