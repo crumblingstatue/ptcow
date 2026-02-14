@@ -12,7 +12,7 @@ use crate::{
 ///
 /// Maximum allowed number of units by PxTone is 50.
 #[repr(transparent)]
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct UnitIdx(pub u8);
 impl UnitIdx {
     /// Get the index as a usize
