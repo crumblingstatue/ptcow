@@ -423,23 +423,27 @@ fn fill_rect3_onward(bld: &mut NoiseTable) {
     let (fst, snd) = bld.inner[NoiseType::Rect3 as usize]
         .split_first_chunk_mut::<{ SMP_NUM_U / 3 }>()
         .unwrap();
+    let rem = SMP_NUM - SMP_NUM / 3;
     fst.fill(SAMPLING_TOP);
-    snd.fill(-SAMPLING_TOP);
+    snd[..rem as usize].fill(-SAMPLING_TOP);
     let (fst, snd) = bld.inner[NoiseType::Rect4 as usize]
         .split_first_chunk_mut::<{ SMP_NUM_U / 4 }>()
         .unwrap();
     fst.fill(SAMPLING_TOP);
-    snd.fill(-SAMPLING_TOP);
+    let rem = SMP_NUM - SMP_NUM / 4;
+    snd[..rem as usize].fill(-SAMPLING_TOP);
     let (fst, snd) = bld.inner[NoiseType::Rect8 as usize]
         .split_first_chunk_mut::<{ SMP_NUM_U / 8 }>()
         .unwrap();
     fst.fill(SAMPLING_TOP);
-    snd.fill(-SAMPLING_TOP);
+    let rem = SMP_NUM - SMP_NUM / 8;
+    snd[..rem as usize].fill(-SAMPLING_TOP);
     let (fst, snd) = bld.inner[NoiseType::Rect16 as usize]
         .split_first_chunk_mut::<{ SMP_NUM_U / 16 }>()
         .unwrap();
     fst.fill(SAMPLING_TOP);
-    snd.fill(-SAMPLING_TOP);
+    let rem = SMP_NUM - SMP_NUM / 16;
+    snd[..rem as usize].fill(-SAMPLING_TOP);
     fill_saw3(bld);
     fill_saw4(bld);
     fill_saw6(bld);
