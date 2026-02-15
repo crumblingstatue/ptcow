@@ -187,6 +187,12 @@ impl NoiseTable {
         fill_rect3_onward(&mut this);
         this
     }
+    /// (testing-only) Get the inner wave table
+    #[cfg(feature = "testing")]
+    #[must_use]
+    pub const fn inner(&self) -> &Tables {
+        &self.inner
+    }
 }
 
 /// Build PCM data out of [`NoiseData`].

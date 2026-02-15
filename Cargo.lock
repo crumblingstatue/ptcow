@@ -387,6 +387,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pttest"
+version = "0.1.0"
+dependencies = [
+ "anstyle",
+ "bytemuck",
+ "clap",
+ "ptcow",
+]
+
+[[package]]
 name = "quote"
 version = "1.0.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"

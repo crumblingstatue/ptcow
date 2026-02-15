@@ -15,6 +15,7 @@ oggv = [
     "dep:symphonia-format-ogg",
     "dep:symphonia-codec-vorbis",
 ]
+testing = []
 
 [dependencies]
 arrayvec = "0.7.6"
@@ -37,7 +38,7 @@ opt-level = 1
 workspace = true
 
 [workspace]
-members = ["crates/ptmoo", "crates/ser-test"]
+members = ["crates/ptmoo", "crates/pttest", "crates/ser-test"]
 
 [workspace.dependencies]
 bytemuck.version = "1.25"

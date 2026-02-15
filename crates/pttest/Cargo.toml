@@ -1,0 +1,15 @@
+[package]
+name = "pttest"
+version = "0.1.0"
+edition = "2024"
+description = "Testing utilities for ptcow"
+
+[dependencies]
+ptcow.path = "../../"
+ptcow.features = ["testing"]
+clap.workspace = true
+bytemuck.workspace = true
+anstyle = "1"
+
+[lints]
+workspace = true
