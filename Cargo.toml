@@ -40,11 +40,11 @@ workspace = true
 members = ["crates/ptmoo", "crates/ser-test"]
 
 [workspace.dependencies]
-bytemuck.version = "1.24"
+bytemuck.version = "1.25"
 bytemuck.features = ["derive", "extern_crate_alloc"]
 clap.version = "4.5"
 clap.features = ["derive"]
-bitflags.version = "2.10"
+bitflags.version = "2.11"
 bitflags.features = ["bytemuck"]
 
 [workspace.lints.rust]
