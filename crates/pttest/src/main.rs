@@ -53,12 +53,18 @@ fn cmp_noise_tables() -> Result<(), Box<dyn Error>> {
     if !path.exists() {
         return Err(format!("Need clean file at '{}'", path.display()).into());
     }
-    let clean = std::fs::read(path)?;
+    let clean = std::fs::read(&path)?;
     let dirty = dump_noise_tables_buf();
     if clean == dirty {
         pass("Noise tables match");
     } else {
-        fail("Noise table mismatch");
+        let dirty_path = basedir().join("dirty-wavetable.pcm");
+        let _ = std::fs::write(&dirty_path, dirty);
+        fail(&format!(
+            "Noise table mismatch.\n{} vs {}",
+            path.display(),
+            dirty_path.display()
+        ));
     }
     Ok(())
 }
