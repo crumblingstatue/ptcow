@@ -464,33 +464,17 @@ fn fill_saw3(bld: &mut NoiseTable) {
 }
 
 fn fill_saw4(bld: &mut NoiseTable) {
-    /*let mut chunker = Chunker::new(&mut bld.inner[NoiseType::Saw4 as usize]);
-    chunker.next_until::<{ SMP_NUM_U / 4 }>().fill(SAMPLING_TOP);
-    chunker.next_until::<{ SMP_NUM_U * 2 / 4 }>().fill(SAMPLING_TOP / 3);
-    chunker.next_until::<{ SMP_NUM_U * 3 / 4 }>().fill(-SAMPLING_TOP / 3);
-    chunker.rest().fill(-SAMPLING_TOP);*/
-    let mut slice = &mut *bld.inner[NoiseType::Saw4 as usize];
-    let mut s = 0;
-    while s < SMP_NUM_U / 4 {
-        slice[0] = SAMPLING_TOP;
-        slice = &mut slice[1..];
-        s += 1;
-    }
-    while s < SMP_NUM_U * 2 / 4 {
-        slice[0] = SAMPLING_TOP / 3;
-        slice = &mut slice[1..];
-        s += 1;
-    }
-    while s < SMP_NUM_U * 3 / 4 {
-        slice[0] = -SAMPLING_TOP / 3;
-        slice = &mut slice[1..];
-        s += 1;
-    }
-    while s < SMP_NUM_U {
-        slice[0] = -SAMPLING_TOP;
-        slice = &mut slice[1..];
-        s += 1;
-    }
+    let [chk1, chk2, chk3, chk4, chk5, ..] =
+        bld.inner[NoiseType::Saw4 as usize].as_chunks_mut::<{ SMP_NUM_U / 4 }>().0
+    else {
+        return;
+    };
+    chk1.fill(SAMPLING_TOP);
+    chk2.fill(SAMPLING_TOP / 3);
+    chk3.fill(-SAMPLING_TOP / 3);
+    chk4.fill(-SAMPLING_TOP);
+    // Yes, the final chunk has an extra value in PxTone (apparently?)
+    chk5[0] = -SAMPLING_TOP;
 }
 
 fn fill_saw6(bld: &mut NoiseTable) {
