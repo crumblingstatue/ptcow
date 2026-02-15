@@ -101,10 +101,10 @@ impl NoiseTable {
         ];
 
         let tables = [
-            [0; 2 * SMP_NUM_U].into(),
-            [0; 2 * SMP_NUM_U].into(),
-            [0; 2 * SMP_NUM_U].into(),
-            vec![0; 2 * SMP_NUM_RAND as usize].into(),
+            [0; SMP_NUM_U].into(),
+            [0; SMP_NUM_U].into(),
+            [0; SMP_NUM_U].into(),
+            vec![0; SMP_NUM_RAND as usize].into(),
             [0; SMP_NUM_U].into(),
             [0; SMP_NUM_U].into(),
             [0; SMP_NUM_U].into(),
@@ -231,7 +231,7 @@ fn build_pcm_samp<'a>(
             RandomType::None => {
                 offset = po.offset as i32;
                 if offset >= 0 {
-                    work = f64::from(po.samp[offset as usize]);
+                    work = f64::from(po.samp.get(offset as usize).copied().unwrap_or(0));
                 } else {
                     work = 0.;
                 }
@@ -262,7 +262,7 @@ fn build_pcm_samp<'a>(
         match po.ran_type {
             RandomType::None => {
                 offset = po.offset as i32;
-                vol = f64::from(po.samp[offset as usize]);
+                vol = f64::from(po.samp.get(offset as usize).copied().unwrap_or(0));
             }
             RandomType::Saw => {
                 vol =
@@ -366,7 +366,10 @@ fn build_unit_noise(unit: &mut NoiseBuilderUnit<'_>, rand_tbl: &[i16]) {
     let mut fre = match unit.freq.ran_type {
         RandomType::None => {
             let offset = unit.freq.offset as usize;
-            f64::from(KEY_TOP * i32::from(unit.freq.samp[offset]) / i32::from(SAMPLING_TOP))
+            f64::from(
+                KEY_TOP * i32::from(unit.freq.samp.get(offset).copied().unwrap_or(0))
+                    / i32::from(SAMPLING_TOP),
+            )
         }
         RandomType::Saw => f64::from(
             unit.freq.rdm_start
@@ -576,7 +579,7 @@ fn set_ocsillator<'smp>(
     to.rdm_start = 0;
     to.rdm_index = (f64::from(SMP_NUM_RAND) * f64::from(from.offset / 100.)) as usize;
     let p = rand_tbl;
-    to.rdm_margin = i32::from(p[to.rdm_index]);
+    to.rdm_margin = i32::from(p.get(to.rdm_index).copied().unwrap_or(0));
 }
 
 const BASIC_FREQUENCY: u8 = 100;
