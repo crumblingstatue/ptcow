@@ -113,10 +113,10 @@ impl NoiseTable {
             [0; 2 * SMP_NUM_U].into(),
             [0; 2 * SMP_NUM_U].into(),
             [0; 2 * SMP_NUM_U].into(),
-            [0; 2 * SMP_NUM_U].into(),
-            [0; 2 * SMP_NUM_U].into(),
-            [0; 2 * SMP_NUM_U].into(),
-            [0; 2 * SMP_NUM_U].into(),
+            [0; SMP_NUM_U].into(),
+            [0; SMP_NUM_U].into(),
+            [0; SMP_NUM_U].into(),
+            [0; SMP_NUM_U].into(),
         ];
 
         let mut this = Self { inner: tables };
