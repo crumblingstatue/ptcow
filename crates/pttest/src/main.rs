@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
     match args {
         Args::DumpNoiseTables { out_path } => dump_noise_tables_file(out_path)?,
-        Args::CompareNoiseTables => cmp_noise_tables(),
+        Args::CompareNoiseTables => cmp_noise_tables()?,
     }
     Ok(())
 }
@@ -48,14 +48,19 @@ fn basedir() -> PathBuf {
     std::env::temp_dir().join("ptcow-test")
 }
 
-fn cmp_noise_tables() {
-    let clean = std::fs::read(basedir().join("clean-wavetable.pcm")).unwrap();
+fn cmp_noise_tables() -> Result<(), Box<dyn Error>> {
+    let path = basedir().join("clean-wavetable.pcm");
+    if !path.exists() {
+        return Err(format!("Need clean file at '{}'", path.display()).into());
+    }
+    let clean = std::fs::read(path)?;
     let dirty = dump_noise_tables_buf();
     if clean == dirty {
         pass("Noise tables match");
     } else {
         fail("Noise table mismatch");
     }
+    Ok(())
 }
 
 fn pass(msg: &str) {
