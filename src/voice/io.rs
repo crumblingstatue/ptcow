@@ -204,6 +204,13 @@ impl Voice {
         }
         out.extend_from_slice(&data.raw_bytes);
     }
+    /// Read a voice from `.ptvoice` data
+    pub fn from_ptvoice(data: &[u8]) -> ReadResult<Self> {
+        let mut this = Self::default();
+        let mut reader = crate::io::Reader { data, cur: 0 };
+        this.ptv_read(&mut reader)?;
+        Ok(this)
+    }
     #[expect(clippy::inconsistent_digit_grouping)]
     fn ptv_read(&mut self, rd: &mut crate::io::Reader) -> ReadResult {
         if &rd.next::<[u8; 8]>()? != b"PTVOICE-" {

@@ -23,6 +23,13 @@ const LATEST_VER: u32 = 2012_04_18;
 const NOISE_TAG: &[u8; 8] = b"PTNOISE-";
 
 impl NoiseData {
+    /// Read a noise from `.ptnoise` data
+    pub fn from_ptnoise(data: &[u8]) -> ReadResult<Self> {
+        let mut reader = crate::io::Reader { data, cur: 0 };
+        let mut this = Self::default();
+        this.read(&mut reader)?;
+        Ok(this)
+    }
     pub(crate) fn read(&mut self, rd: &mut crate::io::Reader) -> ReadResult {
         let mut design_unit: &mut NoiseDesignUnit;
 
