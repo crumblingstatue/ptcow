@@ -286,9 +286,9 @@ impl Voice {
             voice_inst.recalc_envelope(voice_unit, sps);
         }
     }
-
-    pub(crate) fn tone_ready(&mut self, ptn_bldr: &NoiseTable, out_sps: SampleRate) {
-        self.tone_ready_sample(ptn_bldr);
+    /// Recalculate the sample and envelope data for this voice
+    pub fn recalculate(&mut self, noise_tbl: &NoiseTable, out_sps: SampleRate) {
+        self.tone_ready_sample(noise_tbl);
         self.tone_ready_envelopes(out_sps);
     }
     /// Allocate voice unit for either a single channel, or both.

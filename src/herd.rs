@@ -143,7 +143,7 @@ pub fn rebuild_tones(
     }
     let builder = NoiseTable::generate();
     for voice in &mut ins.voices {
-        voice.tone_ready(&builder, out_sample_rate);
+        voice.recalculate(&builder, out_sample_rate);
     }
 }
 
