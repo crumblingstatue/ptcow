@@ -26,7 +26,7 @@ impl UnitIdx {
 ///
 /// Maximum allowed number of voices by PxTone is 100.
 #[repr(transparent)]
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, Default)]
 pub struct VoiceIdx(pub u8);
 impl VoiceIdx {
     /// Get the index as a usize
