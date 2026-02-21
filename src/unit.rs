@@ -114,7 +114,7 @@ pub type PanTimeOff = u8;
 
 impl Default for Unit {
     fn default() -> Self {
-        Self {
+        let mut this = Self {
             name: String::default(),
             key_now: Default::default(),
             key_start: Default::default(),
@@ -131,7 +131,9 @@ impl Default for Unit {
             tones: [VoiceTone::default(), VoiceTone::default()],
             voice_idx: VoiceIdx(0),
             mute: false,
-        }
+        };
+        this.tone_init();
+        this
     }
 }
 
