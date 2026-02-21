@@ -293,6 +293,10 @@ impl Voice {
     }
     /// Allocate voice unit for either a single channel, or both.
     pub fn allocate<const BOTH: bool>(&mut self) {
+        // To make sure we allocate the proper number of units, we need
+        // to ensure there are 0 units before we begin.
+        self.units.clear();
+        self.insts.clear();
         let u = VoiceUnit {
             basic_key: DEFAULT_BASICKEY.cast_signed(),
             tuning: 1.0,
