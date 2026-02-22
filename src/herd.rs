@@ -106,18 +106,69 @@ pub struct MooInstructions {
     /// Output sample rate
     pub out_sample_rate: SampleRate,
     /// The voices of the cows
-    pub voices: Vec<Voice>,
+    pub voices: Voices,
     /// How many samples constitute a tick.
     pub samples_per_tick: SamplesPerTick,
+}
+
+/// The vocal cords of the cows
+#[derive(Default)]
+pub struct Voices(Vec<Voice>);
+
+impl std::ops::Deref for Voices {
+    type Target = Vec<Voice>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Voices {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Voices {
+    /// The current number of voices
+    #[must_use]
+    pub const fn len(&self) -> u8 {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "50 is the max unit number, so this always succeeds"
+        )]
+        (self.0.len() as u8)
+    }
+    /// Whether there are no voices
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    /// Immutably iterate over the voices, along with their indices
+    pub fn enumerated(&self) -> impl Iterator<Item = (VoiceIdx, &Voice)> {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "50 is the max unit number, so this always succeeds"
+        )]
+        self.iter().enumerate().map(|(idx, item)| (VoiceIdx(idx as u8), item))
+    }
+    /// Mutably iterate over the voices, along with their indices
+    pub fn enumerated_mut(&mut self) -> impl Iterator<Item = (VoiceIdx, &mut Voice)> {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "50 is the max unit number, so this always succeeds"
+        )]
+        self.iter_mut().enumerate().map(|(idx, item)| (VoiceIdx(idx as u8), item))
+    }
 }
 
 impl MooInstructions {
     /// Create a new [`MooInstructions`] with the provided sample rate
     #[must_use]
-    pub const fn new(out_sample_rate: SampleRate) -> Self {
+    pub fn new(out_sample_rate: SampleRate) -> Self {
         Self {
             out_sample_rate,
-            voices: Vec::new(),
+            voices: Voices::default(),
             samples_per_tick: 1.0,
         }
     }
@@ -142,7 +193,7 @@ pub fn rebuild_tones(
         ovr.rebuild();
     }
     let builder = NoiseTable::generate();
-    for voice in &mut ins.voices {
+    for voice in ins.voices.iter_mut() {
         voice.recalculate(&builder, out_sample_rate);
     }
 }
@@ -294,7 +345,7 @@ pub fn read_song(
     };
     let mut ins = MooInstructions {
         out_sample_rate,
-        voices: Vec::new(),
+        voices: Voices::default(),
         samples_per_tick: 0.0,
     };
     let mut herd = Herd::default();
