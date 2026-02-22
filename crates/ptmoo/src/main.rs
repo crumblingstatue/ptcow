@@ -146,7 +146,7 @@ fn print(
     for (unit, nw) in zip(herd.units.iter(), name_widths) {
         let val: i32 = unit.pan_time_bufs.iter().flatten().sum();
         let name: &str = &unit.name;
-        let voice = &ins.voices[unit.voice_idx.usize()];
+        let voice = &ins.voices[unit.voice_idx];
         for (i, unit) in voice.units.iter().enumerate() {
             let kind = match &unit.data {
                 VoiceData::Noise(_) => "🥁",

@@ -512,7 +512,12 @@ fn read_assist_voice(rd: &mut Reader, ins: &mut MooInstructions) -> ReadResult {
         eprintln!("Warning: rrr is not 0. Possibly invalid.");
     }
 
-    let voice = &mut ins.voices[assi.voice_idx as usize];
+    // The maximum number of voices is 100, so the voice number must fit into u8
+    let Ok(idx) = u8::try_from(assi.voice_idx) else {
+        return Err(ProjectReadError::FmtUnknown);
+    };
+
+    let voice = &mut ins.voices[crate::VoiceIdx(idx)];
     let len = strlen(&assi.name);
     voice.name = SHIFT_JIS.decode(&assi.name[..len as usize]).0.into_owned();
 

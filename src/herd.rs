@@ -129,6 +129,20 @@ impl std::ops::DerefMut for Voices {
     }
 }
 
+impl std::ops::Index<VoiceIdx> for Voices {
+    type Output = Voice;
+
+    fn index(&self, index: VoiceIdx) -> &Self::Output {
+        &self.0[usize::from(index.0)]
+    }
+}
+
+impl std::ops::IndexMut<VoiceIdx> for Voices {
+    fn index_mut(&mut self, index: VoiceIdx) -> &mut Self::Output {
+        &mut self.0[usize::from(index.0)]
+    }
+}
+
 impl Voices {
     /// The current number of voices
     #[must_use]
