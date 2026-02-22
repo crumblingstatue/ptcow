@@ -1,5 +1,5 @@
 use crate::{
-    ReadResult, SampleRate, SamplesPerTick, Timing,
+    ReadResult, SampleRate, SamplesPerTick, Timing, UnitIdx,
     delay::Delay,
     event::EveList,
     master::Master,
@@ -212,6 +212,20 @@ impl std::ops::Deref for Units {
 impl std::ops::DerefMut for Units {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl<T: Into<UnitIdx>> std::ops::Index<T> for Units {
+    type Output = Unit;
+
+    fn index(&self, index: T) -> &Self::Output {
+        &self.0[usize::from(index.into().0)]
+    }
+}
+
+impl<T: Into<UnitIdx>> std::ops::IndexMut<T> for Units {
+    fn index_mut(&mut self, index: T) -> &mut Self::Output {
+        &mut self.0[usize::from(index.into().0)]
     }
 }
 

@@ -350,8 +350,7 @@ fn read_unit(herd: &mut Herd, rd: &mut Reader) -> ReadResult {
 
     let len = strlen(&io_unit.name) as usize;
 
-    herd.units[io_unit.unit_index as usize].name =
-        SHIFT_JIS.decode(&io_unit.name[..len]).0.into_owned();
+    herd.units[unit_idx].name = SHIFT_JIS.decode(&io_unit.name[..len]).0.into_owned();
 
     Ok(())
 }

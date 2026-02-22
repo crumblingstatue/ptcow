@@ -21,6 +21,11 @@ impl UnitIdx {
         usize::from(self.0)
     }
 }
+impl From<u8> for UnitIdx {
+    fn from(value: u8) -> Self {
+        Self(value)
+    }
+}
 
 /// Voice index
 ///
