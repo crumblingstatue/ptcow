@@ -199,6 +199,14 @@ impl Units {
     pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
+    /// Iterate over the units, along with their indices
+    pub fn enumerated_mut(&mut self) -> impl Iterator<Item = (UnitIdx, &mut Unit)> {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "50 is the max unit number, so this always succeeds"
+        )]
+        self.iter_mut().enumerate().map(|(idx, item)| (UnitIdx(idx as u8), item))
+    }
 }
 
 impl std::ops::Deref for Units {
