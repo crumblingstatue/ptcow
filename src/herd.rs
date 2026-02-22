@@ -113,10 +113,10 @@ pub struct MooInstructions {
 
 /// The vocal cords of the cows
 #[derive(Default)]
-pub struct Voices(Vec<Voice>);
+pub struct Voices(ArrayVec<Voice, 100>);
 
 impl std::ops::Deref for Voices {
-    type Target = Vec<Voice>;
+    type Target = ArrayVec<Voice, 100>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
