@@ -43,7 +43,7 @@ pub(super) fn next_sample<T: OutSample>(
     out: &mut [T; 2],
     advance: bool,
 ) -> bool {
-    for unit in &mut *herd.units {
+    for unit in herd.units.iter_mut() {
         unit.tone_envelope(&ins.voices);
     }
 
@@ -57,13 +57,13 @@ pub(super) fn next_sample<T: OutSample>(
         }
     }
 
-    for unit in &mut *herd.units {
+    for unit in herd.units.iter_mut() {
         unit.tone_sample(herd.time_pan_index, herd.smp_smooth, &ins.voices);
     }
 
     for ch in 0..MAX_CHANNEL {
         let mut group_smps = [0; _];
-        for unit in &mut *herd.units {
+        for unit in herd.units.iter_mut() {
             if !unit.mute {
                 unit.tone_supple(&mut group_smps, ch, herd.time_pan_index);
             }
@@ -88,7 +88,7 @@ pub(super) fn next_sample<T: OutSample>(
     }
     herd.time_pan_index = (herd.time_pan_index + 1) & (PanTimeBuf::LEN - 1);
 
-    for unit in &mut *herd.units {
+    for unit in herd.units.iter_mut() {
         #[expect(clippy::cast_sign_loss)]
         let key_now = unit.tone_increment_key() as usize;
         unit.tone_increment_sample(PULSE_FREQ.get2(key_now) * herd.smp_stride, &ins.voices);

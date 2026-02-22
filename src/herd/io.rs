@@ -339,7 +339,12 @@ fn read_unit(herd: &mut Herd, rd: &mut Reader) -> ReadResult {
     if io_unit.rrr != 0 {
         return Err(ProjectReadError::FmtUnknown);
     }
-    if usize::from(io_unit.unit_index) >= herd.units.len() {
+    // Max number of units is 50, yet the field is 16 bits, so if it can't be converted, we bail
+    let unit_idx: u8 = match io_unit.unit_index.try_into() {
+        Ok(idx) => idx,
+        Err(_) => return Err(ProjectReadError::FmtUnknown),
+    };
+    if unit_idx >= herd.units.len() {
         return Err(ProjectReadError::FmtUnknown);
     }
 
@@ -479,7 +484,7 @@ fn write_unit_num(out: &mut Vec<u8>, herd: &Herd) {
     out.extend_from_slice(Tag::NumUNIT.to_code());
     let size: u32 = size_of::<NumUnit>().try_into().unwrap();
     out.extend_from_slice(&size.to_le_bytes());
-    let mut n_units: u16 = herd.units.len().try_into().unwrap();
+    let mut n_units: u16 = herd.units.len().into();
     // Only 50 units are supported by the serialization format
     if n_units > MAX_UNITS {
         n_units = MAX_UNITS;

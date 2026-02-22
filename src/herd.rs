@@ -178,7 +178,42 @@ pub struct Herd {
 
 pub type Delays = ArrayVec<Delay, 4>;
 pub type Overdrives = ArrayVec<Overdrive, 2>;
-pub type Units = ArrayVec<Unit, 50>;
+/// The 🐄[cow](Unit)s that moo the song.
+///
+/// The maximum number of them is 50.
+#[derive(Default)]
+pub struct Units(pub(crate) ArrayVec<Unit, 50>);
+
+impl Units {
+    /// The current number of cows
+    #[must_use]
+    pub const fn len(&self) -> u8 {
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "50 is the max unit number, so this always succeeds"
+        )]
+        (self.0.len() as u8)
+    }
+    /// Whether there are no cows
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl std::ops::Deref for Units {
+    type Target = ArrayVec<Unit, 50>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Units {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 impl Herd {
     /// Seek to sample count
@@ -189,7 +224,7 @@ impl Herd {
     }
     /// Make sure all the cows' voices are ready for playback
     pub fn tune_cow_voices(&mut self, ins: &MooInstructions, timing: Timing) {
-        for unit in &mut *self.units {
+        for unit in self.units.iter_mut() {
             unit.tone_init();
             unit.reset_voice(ins, VoiceIdx(0), timing);
         }

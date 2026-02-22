@@ -33,7 +33,7 @@ pub use {
     delay::{Delay, DelayUnit},
     event::{DEFAULT_KEY, EveList, Event, EventPayload, Key},
     herd::{
-        FmtInfo, FmtKind, FmtVer, Herd, MooInstructions, Song, Text,
+        FmtInfo, FmtKind, FmtVer, Herd, MooInstructions, Song, Text, Units,
         moo::{MooPlan, StartPosPlan, current_tick, do_event, moo_prepare},
         read_song, rebuild_tones, serialize_project,
     },
