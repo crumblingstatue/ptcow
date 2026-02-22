@@ -134,7 +134,7 @@ pub fn do_event(
     evt: &Event,
 ) -> ControlFlow<()> {
     let u = evt.unit;
-    let Some(unit) = herd.units.get_mut(u.usize()) else {
+    let Some(unit) = herd.units.get_mut(u) else {
         return ControlFlow::Break(());
     };
 
@@ -174,7 +174,7 @@ fn do_on_event(
     u: UnitIdx,
     evt_tick: Tick,
 ) {
-    let Some(unit) = herd.units.get_mut(u.usize()) else {
+    let Some(unit) = herd.units.get_mut(u) else {
         return;
     };
     // We need a signed clock here for various calculations that can go below zero
@@ -189,7 +189,7 @@ fn do_on_event(
     }
 
     unit.tone_key_on();
-    let Some(voice) = ins.voices.get(unit.voice_idx.usize()) else {
+    let Some(voice) = ins.voices.get(unit.voice_idx) else {
         return;
     };
     for (inst, tone) in zip(&voice.insts, &mut unit.tones) {

@@ -160,6 +160,16 @@ impl Voices {
         )]
         self.iter_mut().enumerate().map(|(idx, item)| (VoiceIdx(idx as u8), item))
     }
+    /// Immutably get the voice at `idx`, returning `None` on out of bounds indexing
+    #[must_use]
+    pub fn get(&self, idx: VoiceIdx) -> Option<&Voice> {
+        self.0.get(idx.usize())
+    }
+    /// Mutably get the voice at `idx`, returning `None` on out of bounds indexing
+    #[must_use]
+    pub fn get_mut(&mut self, idx: VoiceIdx) -> Option<&mut Voice> {
+        self.0.get_mut(idx.usize())
+    }
 }
 
 impl MooInstructions {
@@ -265,6 +275,16 @@ impl Units {
             reason = "50 is the max unit number, so this always succeeds"
         )]
         self.iter_mut().enumerate().map(|(idx, item)| (UnitIdx(idx as u8), item))
+    }
+    /// Immutably get the unit at `idx`, returning `None` on out of bounds indexing
+    #[must_use]
+    pub fn get(&self, idx: UnitIdx) -> Option<&Unit> {
+        self.0.get(idx.usize())
+    }
+    /// Mutably get the unit at `idx`, returning `None` on out of bounds indexing
+    #[must_use]
+    pub fn get_mut(&mut self, idx: UnitIdx) -> Option<&mut Unit> {
+        self.0.get_mut(idx.usize())
     }
 }
 

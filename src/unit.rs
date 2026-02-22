@@ -327,7 +327,7 @@ impl Unit {
             voice_idx = VoiceIdx(0);
         }
         self.set_voice(voice_idx);
-        let Some(voice) = &ins.voices.get(voice_idx.usize()) else {
+        let Some(voice) = &ins.voices.get(voice_idx) else {
             eprintln!("Error: Song doesn't have any voices");
             return;
         };
