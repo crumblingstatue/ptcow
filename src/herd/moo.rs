@@ -192,7 +192,8 @@ fn do_on_event(
     let Some(voice) = ins.voices.get(unit.voice_idx) else {
         return;
     };
-    for (inst, tone) in zip(&voice.insts, &mut unit.tones) {
+    for (slot, tone) in zip(&voice.slots, &mut unit.tones) {
+        let inst = &slot.inst;
         if inst.env_release != 0 {
             let max_life_count1: i32 =
                 ((duration - (clock - i32::try_from(evt_tick).unwrap())) as f32)

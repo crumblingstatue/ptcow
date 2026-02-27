@@ -5,7 +5,7 @@ use crate::{
     event::{DEFAULT_BASICKEY, DEFAULT_KEY, DEFAULT_TUNING, DEFAULT_VELOCITY, DEFAULT_VOLUME},
     pulse_frequency::PULSE_FREQ,
     util::ArrayLenExt as _,
-    voice::{Voice, VoiceFlags, VoiceTone},
+    voice::{Voice, VoiceFlags, VoiceSlot, VoiceTone},
 };
 
 /// Unit index
@@ -184,7 +184,8 @@ impl Unit {
             return;
         };
 
-        for (voice_inst, voice_tone) in zip(&voice.insts, &mut self.tones) {
+        for (slot, voice_tone) in zip(&voice.slots, &mut self.tones) {
+            let voice_inst = &slot.inst;
             if voice_tone.life_count > 0 && !voice_inst.env.is_empty() {
                 if voice_tone.on_count > 0 {
                     if voice_tone.env_pos < voice_inst.env.len() {
@@ -270,8 +271,13 @@ impl Unit {
             return;
         };
 
-        for ((voice_inst, voice_tone), voice_unit) in
-            zip(&voice.insts, &mut self.tones).zip(&voice.units)
+        for (
+            VoiceSlot {
+                unit: vu,
+                inst: vinst,
+            },
+            voice_tone,
+        ) in zip(&voice.slots, &mut self.tones)
         {
             if voice_tone.life_count > 0 {
                 voice_tone.life_count -= 1;
@@ -281,12 +287,12 @@ impl Unit {
 
                 voice_tone.smp_pos += f64::from(voice_tone.offset_freq * self.tuning * freq);
 
-                if voice_tone.smp_pos >= f64::from(voice_inst.num_samples) {
-                    if voice_unit.flags.contains(VoiceFlags::WAVE_LOOP) {
-                        if voice_tone.smp_pos >= f64::from(voice_inst.num_samples) {
-                            voice_tone.smp_pos -= f64::from(voice_inst.num_samples);
+                if voice_tone.smp_pos >= f64::from(vinst.num_samples) {
+                    if vu.flags.contains(VoiceFlags::WAVE_LOOP) {
+                        if voice_tone.smp_pos >= f64::from(vinst.num_samples) {
+                            voice_tone.smp_pos -= f64::from(vinst.num_samples);
                         }
-                        if voice_tone.smp_pos >= f64::from(voice_inst.num_samples) {
+                        if voice_tone.smp_pos >= f64::from(vinst.num_samples) {
                             voice_tone.smp_pos = 0.;
                         }
                     } else {
@@ -294,7 +300,7 @@ impl Unit {
                     }
                 }
 
-                if voice_tone.on_count == 0 && !voice_inst.env.is_empty() {
+                if voice_tone.on_count == 0 && !vinst.env.is_empty() {
                     voice_tone.env_start = voice_tone.env_volume;
                     voice_tone.env_pos = 0;
                 }
@@ -332,7 +338,7 @@ impl Unit {
             return;
         };
 
-        for ((vu, inst), tone) in zip(&voice.units, &voice.insts).zip(&mut self.tones) {
+        for (VoiceSlot { unit: vu, inst }, tone) in zip(&voice.slots, &mut self.tones) {
             tone.life_count = 0;
             tone.on_count = 0;
             tone.smp_pos = 0.0;
@@ -361,7 +367,14 @@ impl Unit {
 
         for ch in 0..i32::from(MAX_CHANNEL) {
             let mut time_pan_buf: i32 = 0;
-            for ((voice_tone, voice_inst), vu) in zip(&self.tones, &voice.insts).zip(&voice.units) {
+            for (
+                VoiceSlot {
+                    unit: vu,
+                    inst: voice_inst,
+                },
+                voice_tone,
+            ) in zip(&voice.slots, &self.tones)
+            {
                 // Prevent bytemuck alignment mismatch for empty `smp_w`
                 // Should (probably) only happen on dummy read (unimplemented) features.
                 if voice_inst.sample_buf.is_empty() {

@@ -1,11 +1,11 @@
 use crate::{
-    Bps, ChNum, SampleRate, VoiceData, VoiceInstance, VoiceUnit,
+    Bps, ChNum, SampleRate, VoiceData, VoiceUnit,
     herd::Tag,
     io::write_varint,
     point::EnvPt,
     pulse_oscillator::OsciPt,
     result::{ProjectReadError, ProjectWriteError, ReadResult, WriteResult},
-    voice::{EnvelopeSrc, Voice, VoiceFlags},
+    voice::{EnvelopeSrc, Voice, VoiceFlags, VoiceSlot},
     voice_data::{noise::NoiseData, oggv::OggVData, pcm::PcmData, wave::WaveData},
 };
 
@@ -69,8 +69,7 @@ impl Voice {
             tuning: pcm.tuning,
             ..Default::default()
         };
-        self.units.push(vu);
-        self.insts.push(VoiceInstance::default());
+        self.slots.push(VoiceSlot::from_unit(vu));
         Ok(())
     }
 
@@ -79,7 +78,7 @@ impl Voice {
         #[expect(clippy::cast_possible_truncation)]
         let io_size: u32 = size_of::<IoPcm>() as u32 + data.smp.len() as u32;
         out.extend_from_slice(&io_size.to_le_bytes());
-        let vu = &self.units[0];
+        let vu = &self.slots[0].unit;
         let io_pcm = IoPcm {
             x3x_unit_no: 0,
             basic_key: vu.basic_key.try_into().unwrap(),
@@ -125,8 +124,7 @@ impl Voice {
             tuning: ptn.tuning,
             ..Default::default()
         };
-        self.units.push(vu);
-        self.insts.push(VoiceInstance::default());
+        self.slots.push(VoiceSlot::from_unit(vu));
         Ok(())
     }
 
@@ -135,7 +133,7 @@ impl Voice {
         let io_size_pos = out.len();
         // Placeholder for io size
         out.extend_from_slice(&[0; 4]);
-        let vu = &self.units[0];
+        let vu = &self.slots[0].unit;
         let ptn = IoPtn {
             x3x_unit_no: 0,
             basic_key: vu.basic_key.try_into().unwrap(),
@@ -189,9 +187,9 @@ impl Voice {
         out.extend_from_slice(&size.to_le_bytes());
         let io_oggv: IoOggv = IoOggv {
             xxx: 0,
-            basic_key: self.units[0].basic_key.try_into().unwrap(),
-            voice_flags: self.units[0].flags,
-            tuning: self.units[0].tuning,
+            basic_key: self.slots[0].unit.basic_key.try_into().unwrap(),
+            voice_flags: self.slots[0].unit.flags,
+            tuning: self.slots[0].unit.tuning,
         };
         out.extend_from_slice(bytemuck::bytes_of(&io_oggv));
         let ch: i32 = data.ch;
@@ -264,8 +262,7 @@ impl Voice {
             if data_flags & PTV_DATAFLAG_ENVELOPE != 0 {
                 read_envelope(rd, &mut vu.envelope)?;
             }
-            self.units.push(vu);
-            self.insts.push(VoiceInstance::default());
+            self.slots.push(VoiceSlot::from_unit(vu));
         }
         Ok(())
     }
@@ -284,25 +281,25 @@ impl Voice {
         write_varint(work1, out);
         write_varint(work2, out);
         #[expect(clippy::cast_possible_truncation)]
-        let ch_num: u32 = self.units.len() as u32;
+        let ch_num: u32 = self.slots.len() as u32;
         write_varint(ch_num, out);
-        for vu in &self.units {
-            write_varint(vu.basic_key.cast_unsigned(), out);
-            write_varint(vu.volume.cast_unsigned().into(), out);
-            write_varint(vu.pan.cast_unsigned().into(), out);
-            write_varint(vu.tuning.to_bits(), out);
-            write_varint(vu.flags.bits(), out);
+        for VoiceSlot { unit, .. } in &self.slots {
+            write_varint(unit.basic_key.cast_unsigned(), out);
+            write_varint(unit.volume.cast_unsigned().into(), out);
+            write_varint(unit.pan.cast_unsigned().into(), out);
+            write_varint(unit.tuning.to_bits(), out);
+            write_varint(unit.flags.bits(), out);
             let mut data_flags = PTV_DATAFLAG_WAVE;
-            if !vu.envelope.points.is_empty() {
+            if !unit.envelope.points.is_empty() {
                 data_flags |= PTV_DATAFLAG_ENVELOPE;
             }
             write_varint(data_flags, out);
-            let VoiceData::Wave(wave_data) = &vu.data else {
+            let VoiceData::Wave(wave_data) = &unit.data else {
                 unreachable!()
             };
             write_wave(wave_data, out)?;
-            if !vu.envelope.points.is_empty() {
-                write_envelope(&vu.envelope, out);
+            if !unit.envelope.points.is_empty() {
+                write_envelope(&unit.envelope, out);
             }
         }
         let current_offset = out.len();
@@ -325,8 +322,7 @@ impl Voice {
         #[cfg(feature = "oggv")]
         {
             let unit = oggv::read(rd, &io_oggv, size as usize, ch, sps2, smp_num);
-            self.units.push(unit);
-            self.insts.push(VoiceInstance::default());
+            self.slots.push(VoiceSlot::from_unit(unit));
             Ok(())
         }
         #[cfg(not(feature = "oggv"))]

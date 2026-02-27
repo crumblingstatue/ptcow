@@ -1,7 +1,5 @@
 mod io;
 
-use std::iter::zip;
-
 use arrayvec::ArrayVec;
 
 use crate::{
@@ -240,19 +238,33 @@ pub struct VoiceTone {
 /// Audio data that gives [`Unit`](crate::Unit)s a voice. In other words, an instrument.
 #[derive(Clone)]
 pub struct Voice {
-    /// Mostly static data required to generate the voice samples
-    pub units: ArrayVec<VoiceUnit, 2>,
-    /// Dynamic data to keep track of voice play state
-    pub insts: ArrayVec<VoiceInstance, 2>,
+    /// Wave voices can have 1 or 2 slots, other voice types have 1
+    pub slots: ArrayVec<VoiceSlot, 2>,
     /// Name of the voice
     pub name: String,
+}
+
+#[derive(Clone)]
+pub struct VoiceSlot {
+    /// Mostly static data required to generate the voice samples
+    pub unit: VoiceUnit,
+    /// Dynamic data to keep track of voice play state
+    pub inst: VoiceInstance,
+}
+
+impl VoiceSlot {
+    fn from_unit(unit: VoiceUnit) -> Self {
+        Self {
+            unit,
+            inst: VoiceInstance::default(),
+        }
+    }
 }
 
 impl Default for Voice {
     fn default() -> Self {
         Self {
-            units: ArrayVec::default(),
-            insts: ArrayVec::default(),
+            slots: ArrayVec::new(),
             name: "<no name>".into(),
         }
     }
@@ -260,29 +272,29 @@ impl Default for Voice {
 
 impl Voice {
     pub(crate) fn tone_ready_sample(&mut self, ptn_bldr: &NoiseTable) {
-        for (vinst, vunit) in zip(&mut self.insts, &mut self.units) {
-            vinst.num_samples = 0;
+        for VoiceSlot { unit, inst } in &mut self.slots {
+            inst.num_samples = 0;
 
-            match &mut vunit.data {
+            match &mut unit.data {
                 VoiceData::Pcm(pcm) => {
                     let (body, buf) = pcm.to_converted(NATIVE_SAMPLE_RATE);
-                    vinst.num_samples = body;
-                    vinst.sample_buf = buf;
+                    inst.num_samples = body;
+                    inst.sample_buf = buf;
                 }
                 VoiceData::Noise(ptn) => {
-                    vinst.sample_buf = noise_to_pcm(ptn, ptn_bldr).into_sample_buf();
-                    vinst.num_samples = ptn.smp_num_44k;
+                    inst.sample_buf = noise_to_pcm(ptn, ptn_bldr).into_sample_buf();
+                    inst.num_samples = ptn.smp_num_44k;
                 }
                 VoiceData::Wave(wave) => {
-                    vinst.recalc_wave_data(wave, vunit.volume, vunit.pan);
+                    inst.recalc_wave_data(wave, unit.volume, unit.pan);
                 }
                 VoiceData::OggV(ogg_vdata) => {
                     #[cfg(feature = "oggv")]
                     match crate::voice_data::oggv::decode_oggv(&ogg_vdata.raw_bytes) {
                         Some(pcm) => {
                             let (body, buf) = pcm.to_converted(NATIVE_SAMPLE_RATE);
-                            vinst.num_samples = body;
-                            vinst.sample_buf = buf;
+                            inst.num_samples = body;
+                            inst.sample_buf = buf;
                         }
                         None => {
                             eprintln!("Failed to decode Ogg/Vorbis data");
@@ -296,8 +308,8 @@ impl Voice {
     }
 
     pub(crate) fn tone_ready_envelopes(&mut self, sps: SampleRate) {
-        for (voice_inst, voice_unit) in zip(&mut self.insts, &self.units) {
-            voice_inst.recalc_envelope(voice_unit, sps);
+        for VoiceSlot { unit, inst } in &mut self.slots {
+            inst.recalc_envelope(unit, sps);
         }
     }
     /// Recalculate the sample and envelope data for this voice
