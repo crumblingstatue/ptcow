@@ -188,6 +188,20 @@ pub struct VoiceUnit {
     pub envelope: EnvelopeSrc,
 }
 
+impl Default for VoiceUnit {
+    fn default() -> Self {
+        Self {
+            basic_key: DEFAULT_BASICKEY.cast_signed(),
+            tuning: 1.0,
+            flags: VoiceFlags::SMOOTH,
+            envelope: EnvelopeSrc::default(),
+            data: VoiceData::Noise(NoiseData::new()),
+            volume: 0,
+            pan: 0,
+        }
+    }
+}
+
 bitflags::bitflags! {
     /// Different attributes a voice can have
     #[derive(Clone, Copy, Default, bytemuck::AnyBitPattern, bytemuck::NoUninit, Debug)]
@@ -297,15 +311,7 @@ impl Voice {
         // to ensure there are 0 units before we begin.
         self.units.clear();
         self.insts.clear();
-        let u = VoiceUnit {
-            basic_key: DEFAULT_BASICKEY.cast_signed(),
-            tuning: 1.0,
-            flags: VoiceFlags::SMOOTH,
-            envelope: EnvelopeSrc::default(),
-            data: VoiceData::Noise(NoiseData::new()),
-            volume: 0,
-            pan: 0,
-        };
+        let u = VoiceUnit::default();
         self.units.push(u.clone());
         self.insts.push(VoiceInstance::default());
         if BOTH {
