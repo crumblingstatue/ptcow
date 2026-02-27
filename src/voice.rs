@@ -186,8 +186,10 @@ pub struct VoiceUnit {
     pub envelope: EnvelopeSrc,
 }
 
-impl Default for VoiceUnit {
-    fn default() -> Self {
+impl VoiceUnit {
+    /// Provides default values when constructing a new voice unit
+    #[must_use]
+    pub fn defaults() -> Self {
         Self {
             basic_key: DEFAULT_BASICKEY.cast_signed(),
             tuning: 1.0,

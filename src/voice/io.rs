@@ -69,7 +69,7 @@ impl Voice {
             flags: pcm.voice_flags,
             basic_key: i32::from(pcm.basic_key),
             tuning: pcm.tuning,
-            ..Default::default()
+            ..VoiceUnit::defaults()
         };
         Ok(Self::from_unit(vu))
     }
@@ -123,7 +123,7 @@ impl Voice {
             flags: ptn.voice_flags,
             basic_key: i32::from(ptn.basic_key),
             tuning: ptn.tuning,
-            ..Default::default()
+            ..VoiceUnit::defaults()
         };
         Ok(Self::from_unit(vu))
     }
@@ -245,7 +245,7 @@ impl Voice {
                 pan: rd.next_varint()?.cast_signed().try_into().unwrap(),
                 tuning: f32::from_bits(rd.next_varint()?),
                 flags: VoiceFlags::from_bits_retain(rd.next_varint()?),
-                ..Default::default()
+                ..VoiceUnit::defaults()
             };
             let data_flags = rd.next_varint()?;
             if data_flags & PTV_DATAFLAG_WAVE != 0 {
