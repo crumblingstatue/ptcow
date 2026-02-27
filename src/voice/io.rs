@@ -1,5 +1,5 @@
 use crate::{
-    Bps, ChNum, SampleRate, VoiceData,
+    Bps, ChNum, SampleRate, VoiceData, VoiceInstance, VoiceUnit,
     herd::Tag,
     io::write_varint,
     point::EnvPt,
@@ -62,13 +62,15 @@ impl Voice {
         );
         let smp_buf = pcm_data.sample_mut();
         rd.fill_slice(smp_buf)?;
-        self.allocate::<false>();
-        let vu = &mut self.units[0];
-        vu.data = VoiceData::Pcm(pcm_data);
-        vu.flags = pcm.voice_flags;
-        vu.basic_key = i32::from(pcm.basic_key);
-        vu.tuning = pcm.tuning;
-
+        let vu = VoiceUnit {
+            data: VoiceData::Pcm(pcm_data),
+            flags: pcm.voice_flags,
+            basic_key: i32::from(pcm.basic_key),
+            tuning: pcm.tuning,
+            ..Default::default()
+        };
+        self.units.push(vu);
+        self.insts.push(VoiceInstance::default());
         Ok(())
     }
 
@@ -116,13 +118,15 @@ impl Voice {
 
         let mut noise_data = NoiseData::new();
         noise_data.read(rd)?;
-        self.allocate::<false>();
-        let vu = &mut self.units[0];
-        vu.data = VoiceData::Noise(noise_data);
-        vu.flags = ptn.voice_flags;
-        vu.basic_key = i32::from(ptn.basic_key);
-        vu.tuning = ptn.tuning;
-
+        let vu = VoiceUnit {
+            data: VoiceData::Noise(noise_data),
+            flags: ptn.voice_flags,
+            basic_key: i32::from(ptn.basic_key),
+            tuning: ptn.tuning,
+            ..Default::default()
+        };
+        self.units.push(vu);
+        self.insts.push(VoiceInstance::default());
         Ok(())
     }
 
@@ -236,17 +240,18 @@ impl Voice {
         }
         let num = rd.next_varint()?;
         match num {
-            1 => self.allocate::<false>(),
-            2 => self.allocate::<true>(),
+            1 | 2 => {}
             _ => return Err(ProjectReadError::FmtUnknown),
         }
-        for vu in &mut self.units {
-            vu.basic_key = rd.next_varint()?.cast_signed();
-            vu.volume = rd.next_varint()?.cast_signed().try_into().unwrap();
-            vu.pan = rd.next_varint()?.cast_signed().try_into().unwrap();
-            let work1 = rd.next_varint()?;
-            vu.tuning = f32::from_bits(work1);
-            vu.flags = VoiceFlags::from_bits_retain(rd.next_varint()?);
+        for _ in 0..num {
+            let mut vu = VoiceUnit {
+                basic_key: rd.next_varint()?.cast_signed(),
+                volume: rd.next_varint()?.cast_signed().try_into().unwrap(),
+                pan: rd.next_varint()?.cast_signed().try_into().unwrap(),
+                tuning: f32::from_bits(rd.next_varint()?),
+                flags: VoiceFlags::from_bits_retain(rd.next_varint()?),
+                ..Default::default()
+            };
             let data_flags = rd.next_varint()?;
             if data_flags & PTV_DATAFLAG_WAVE != 0 {
                 let mut wave_data = WaveData::Coord {
@@ -259,6 +264,8 @@ impl Voice {
             if data_flags & PTV_DATAFLAG_ENVELOPE != 0 {
                 read_envelope(rd, &mut vu.envelope)?;
             }
+            self.units.push(vu);
+            self.insts.push(VoiceInstance::default());
         }
         Ok(())
     }
@@ -308,7 +315,6 @@ impl Voice {
         let _size: u32 = rd.next()?;
         #[cfg_attr(not(feature = "oggv"), expect(unused_variables))]
         let io_oggv: IoOggv = rd.next()?;
-        self.allocate::<false>();
         let ch: i32 = rd.next()?;
         let sps2: i32 = rd.next()?;
         let smp_num: i32 = rd.next()?;
@@ -318,15 +324,9 @@ impl Voice {
         }
         #[cfg(feature = "oggv")]
         {
-            oggv::read(
-                rd,
-                &io_oggv,
-                size as usize,
-                &mut self.units[0],
-                ch,
-                sps2,
-                smp_num,
-            );
+            let unit = oggv::read(rd, &io_oggv, size as usize, ch, sps2, smp_num);
+            self.units.push(unit);
+            self.insts.push(VoiceInstance::default());
             Ok(())
         }
         #[cfg(not(feature = "oggv"))]

@@ -305,20 +305,6 @@ impl Voice {
         self.tone_ready_sample(noise_tbl);
         self.tone_ready_envelopes(out_sps);
     }
-    /// Allocate voice unit for either a single channel, or both.
-    pub fn allocate<const BOTH: bool>(&mut self) {
-        // To make sure we allocate the proper number of units, we need
-        // to ensure there are 0 units before we begin.
-        self.units.clear();
-        self.insts.clear();
-        let u = VoiceUnit::default();
-        self.units.push(u.clone());
-        self.insts.push(VoiceInstance::default());
-        if BOTH {
-            self.units.push(u);
-            self.insts.push(VoiceInstance::default());
-        }
-    }
 }
 
 // Never allocate an envelope larger than this (1 megabyte)
