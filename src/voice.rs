@@ -274,6 +274,14 @@ impl Voice {
             name: "<no name>".into(),
         }
     }
+    /// Create a voice with a single slot containing `data`
+    #[must_use]
+    pub fn from_data(data: VoiceData) -> Self {
+        Self::from_unit(VoiceUnit {
+            data,
+            ..VoiceUnit::defaults()
+        })
+    }
     pub(crate) fn tone_ready_sample(&mut self, ptn_bldr: &NoiseTable) {
         for VoiceSlot { unit, inst } in &mut self.slots {
             inst.num_samples = 0;
