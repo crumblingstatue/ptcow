@@ -246,6 +246,9 @@ pub struct Voice {
     pub name: String,
 }
 
+/// Component of a voice
+///
+/// There can be one or two slots for a wave voice, and one slot for every other voice type.
 #[derive(Clone)]
 pub struct VoiceSlot {
     /// Mostly static data required to generate the voice samples

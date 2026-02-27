@@ -46,7 +46,9 @@ pub use {
     result::{ProjectReadError, ReadResult},
     timing::{Meas, SampleT, SamplesPerTick, Tick, Tick16, Timing},
     unit::{GroupIdx, PanTime, PanTimeBuf, PanTimeOff, Unit, UnitIdx, VoiceIdx},
-    voice::{EnvelopeSrc, Voice, VoiceData, VoiceFlags, VoiceInstance, VoiceTone, VoiceUnit},
+    voice::{
+        EnvelopeSrc, Voice, VoiceData, VoiceFlags, VoiceInstance, VoiceSlot, VoiceTone, VoiceUnit,
+    },
     voice_data::{
         noise::{NoiseData, NoiseDesignUnit, NoiseDesignUnitFlags},
         oggv::OggVData,
