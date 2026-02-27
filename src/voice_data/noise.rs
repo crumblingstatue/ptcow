@@ -30,6 +30,13 @@ impl NoiseData {
         this.read(&mut reader)?;
         Ok(this)
     }
+    /// Serialize into `.ptnoise` data
+    #[must_use]
+    pub fn to_ptnoise(&self) -> Vec<u8> {
+        let mut out = Vec::new();
+        self.write(&mut out);
+        out
+    }
     pub(crate) fn read(&mut self, rd: &mut crate::io::Reader) -> ReadResult {
         let mut design_unit: &mut NoiseDesignUnit;
 

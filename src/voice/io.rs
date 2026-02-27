@@ -211,6 +211,12 @@ impl Voice {
         this.ptv_read(&mut reader)?;
         Ok(this)
     }
+    /// Serialize to `.ptvoice` data
+    pub fn to_ptvoice(&self) -> WriteResult<Vec<u8>> {
+        let mut out = Vec::new();
+        self.ptv_write(&mut out)?;
+        Ok(out)
+    }
     #[expect(clippy::inconsistent_digit_grouping)]
     fn ptv_read(&mut self, rd: &mut crate::io::Reader) -> ReadResult {
         if &rd.next::<[u8; 8]>()? != b"PTVOICE-" {
