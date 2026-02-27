@@ -261,15 +261,6 @@ impl VoiceSlot {
     }
 }
 
-impl Default for Voice {
-    fn default() -> Self {
-        Self {
-            slots: ArrayVec::new(),
-            name: "<no name>".into(),
-        }
-    }
-}
-
 impl Voice {
     /// Create a voice with a single slot containing `unit`
     #[must_use]
