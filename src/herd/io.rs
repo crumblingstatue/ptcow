@@ -422,22 +422,12 @@ fn read_version(rd: &mut Reader) -> ReadResult<FmtInfo> {
 }
 
 fn read_voice(ins: &mut MooInstructions, rd: &mut Reader, kind: IoVoiceType) -> ReadResult {
-    let mut voice = Voice::default();
-
-    match kind {
-        IoVoiceType::Pcm => {
-            voice.read_mate_pcm(rd)?;
-        }
-        IoVoiceType::Ptv => {
-            voice.read_mate_ptv(rd)?;
-        }
-        IoVoiceType::Ptn => {
-            voice.read_mate_ptn(rd)?;
-        }
-        IoVoiceType::Oggv => {
-            voice.read_ogg(rd)?;
-        }
-    }
+    let voice = match kind {
+        IoVoiceType::Pcm => Voice::read_mate_pcm(rd)?,
+        IoVoiceType::Ptv => Voice::read_mate_ptv(rd)?,
+        IoVoiceType::Ptn => Voice::read_mate_ptn(rd)?,
+        IoVoiceType::Oggv => Voice::read_ogg(rd)?,
+    };
     ins.voices.push(voice);
     Ok(())
 }

@@ -271,6 +271,16 @@ impl Default for Voice {
 }
 
 impl Voice {
+    /// Create a voice with a single slot containing `unit`
+    #[must_use]
+    pub fn from_unit(unit: VoiceUnit) -> Self {
+        let mut slots = ArrayVec::new();
+        slots.push(VoiceSlot::from_unit(unit));
+        Self {
+            slots,
+            name: "<no name>".into(),
+        }
+    }
     pub(crate) fn tone_ready_sample(&mut self, ptn_bldr: &NoiseTable) {
         for VoiceSlot { unit, inst } in &mut self.slots {
             inst.num_samples = 0;

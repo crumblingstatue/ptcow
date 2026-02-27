@@ -1,3 +1,5 @@
+use arrayvec::ArrayVec;
+
 use crate::{
     Bps, ChNum, SampleRate, VoiceData, VoiceUnit,
     herd::Tag,
@@ -37,7 +39,7 @@ struct IoPtn {
 
 /// I/O
 impl Voice {
-    pub(crate) fn read_mate_pcm(&mut self, rd: &mut crate::io::Reader) -> ReadResult {
+    pub(crate) fn read_mate_pcm(rd: &mut crate::io::Reader) -> ReadResult<Self> {
         let _size = rd.next::<u32>()?;
 
         let pcm = rd.next::<IoPcm>()?;
@@ -69,8 +71,7 @@ impl Voice {
             tuning: pcm.tuning,
             ..Default::default()
         };
-        self.slots.push(VoiceSlot::from_unit(vu));
-        Ok(())
+        Ok(Self::from_unit(vu))
     }
 
     pub(crate) fn write_mate_pcm(&self, out: &mut Vec<u8>, data: &PcmData) {
@@ -107,7 +108,7 @@ impl Voice {
         out.extend_from_slice(&data.smp);
     }
 
-    pub(crate) fn read_mate_ptn(&mut self, rd: &mut crate::io::Reader) -> ReadResult {
+    pub(crate) fn read_mate_ptn(rd: &mut crate::io::Reader) -> ReadResult<Self> {
         let _size = rd.next::<u32>()?;
         let ptn = rd.next::<IoPtn>()?;
 
@@ -124,8 +125,7 @@ impl Voice {
             tuning: ptn.tuning,
             ..Default::default()
         };
-        self.slots.push(VoiceSlot::from_unit(vu));
-        Ok(())
+        Ok(Self::from_unit(vu))
     }
 
     pub(crate) fn write_mate_ptn(&self, out: &mut Vec<u8>, data: &NoiseData) {
@@ -148,12 +148,10 @@ impl Voice {
         out[io_size_pos..io_size_pos + 4].copy_from_slice(&bytes_written.to_le_bytes());
     }
 
-    pub(crate) fn read_mate_ptv(&mut self, rd: &mut crate::io::Reader) -> ReadResult {
+    pub(crate) fn read_mate_ptv(rd: &mut crate::io::Reader) -> ReadResult<Self> {
         let _size: u32 = rd.next()?;
         let _ptv: IoPtv = rd.next()?;
-
-        self.ptv_read(rd)?;
-        Ok(())
+        Self::ptv_read(rd)
     }
     pub(crate) fn write_mate_ptv(&self, out: &mut Vec<u8>) -> WriteResult {
         out.extend_from_slice(Tag::MatePTV.to_code());
@@ -208,10 +206,8 @@ impl Voice {
     }
     /// Read a voice from `.ptvoice` data
     pub fn from_ptvoice(data: &[u8]) -> ReadResult<Self> {
-        let mut this = Self::default();
         let mut reader = crate::io::Reader { data, cur: 0 };
-        this.ptv_read(&mut reader)?;
-        Ok(this)
+        Self::ptv_read(&mut reader)
     }
     /// Serialize to `.ptvoice` data
     pub fn to_ptvoice(&self) -> WriteResult<Vec<u8>> {
@@ -220,7 +216,7 @@ impl Voice {
         Ok(out)
     }
     #[expect(clippy::inconsistent_digit_grouping)]
-    fn ptv_read(&mut self, rd: &mut crate::io::Reader) -> ReadResult {
+    fn ptv_read(rd: &mut crate::io::Reader) -> ReadResult<Self> {
         if &rd.next::<[u8; 8]>()? != b"PTVOICE-" {
             return Err(ProjectReadError::InvalidTag);
         }
@@ -241,6 +237,7 @@ impl Voice {
             1 | 2 => {}
             _ => return Err(ProjectReadError::FmtUnknown),
         }
+        let mut slots = ArrayVec::new();
         for _ in 0..num {
             let mut vu = VoiceUnit {
                 basic_key: rd.next_varint()?.cast_signed(),
@@ -262,9 +259,12 @@ impl Voice {
             if data_flags & PTV_DATAFLAG_ENVELOPE != 0 {
                 read_envelope(rd, &mut vu.envelope)?;
             }
-            self.slots.push(VoiceSlot::from_unit(vu));
+            slots.push(VoiceSlot::from_unit(vu));
         }
-        Ok(())
+        Ok(Self {
+            slots,
+            name: "<no name>".into(),
+        })
     }
     #[expect(clippy::inconsistent_digit_grouping)]
     fn ptv_write(&self, out: &mut Vec<u8>) -> WriteResult {
@@ -308,7 +308,7 @@ impl Voice {
         out[total_offset..total_offset + 4].copy_from_slice(&amount_written.to_le_bytes());
         Ok(())
     }
-    pub(crate) fn read_ogg(&mut self, rd: &mut crate::io::Reader<'_>) -> ReadResult {
+    pub(crate) fn read_ogg(rd: &mut crate::io::Reader<'_>) -> ReadResult<Self> {
         let _size: u32 = rd.next()?;
         #[cfg_attr(not(feature = "oggv"), expect(unused_variables))]
         let io_oggv: IoOggv = rd.next()?;
@@ -317,13 +317,12 @@ impl Voice {
         let smp_num: i32 = rd.next()?;
         let size: u32 = rd.next()?;
         if size == 0 {
-            return Ok(());
+            return Err(ProjectReadError::InvalidData);
         }
         #[cfg(feature = "oggv")]
         {
             let unit = oggv::read(rd, &io_oggv, size as usize, ch, sps2, smp_num);
-            self.slots.push(VoiceSlot::from_unit(unit));
-            Ok(())
+            Ok(Self::from_unit(unit))
         }
         #[cfg(not(feature = "oggv"))]
         {
