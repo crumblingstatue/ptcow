@@ -57,8 +57,12 @@ impl VoiceInstance {
         };
         self.env = prepared;
         if head < envelope.points.len() {
-            self.env_release = (f64::from((envelope.points[head]).x) * f64::from(out_sps)
-                / f64::from(envelope.seconds_per_point)) as u32;
+            let release_f64 = f64::from((envelope.points[head]).x) * f64::from(out_sps)
+                / f64::from(envelope.seconds_per_point);
+            // Do some basic sanity clamping to ensure the resulting u32 will be
+            // able to be converted to i32 (required in some places)
+            let clamped = release_f64.clamp(0.0, 1_000_000.0);
+            self.env_release = clamped as u32;
         } else {
             self.env_release = 0;
         }
