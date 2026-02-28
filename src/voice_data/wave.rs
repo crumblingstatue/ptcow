@@ -1,7 +1,14 @@
-use crate::pulse_oscillator::OsciPt;
+use crate::{EnvelopeSrc, pulse_oscillator::OsciPt};
+
+#[derive(Clone)]
+pub struct WaveData {
+    pub inner: WaveDataInner,
+    pub envelope: EnvelopeSrc,
+}
+
 /// What kind of wave to generate
 #[derive(Clone)]
-pub enum WaveData {
+pub enum WaveDataInner {
     /// Wave generated with [`coord`](crate::coord).
     Coord {
         /// The points to generate the wave from.

@@ -6,7 +6,12 @@ use crate::{
     noise_builder::{NoiseTable, noise_to_pcm},
     point::EnvPt,
     pulse_oscillator::{OsciArgs, coord, overtone},
-    voice_data::{noise::NoiseData, oggv::OggVData, pcm::PcmData, wave::WaveData},
+    voice_data::{
+        noise::NoiseData,
+        oggv::OggVData,
+        pcm::PcmData,
+        wave::{WaveData, WaveDataInner},
+    },
 };
 
 #[derive(Clone)]
@@ -42,10 +47,9 @@ pub struct VoiceInstance {
 }
 
 impl VoiceInstance {
-    /// Recalculate the envelope based on the definition in `voice_unit`.
+    /// Recalculate the envelope from the source `envelope`
     #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    pub fn recalc_envelope(&mut self, voice_unit: &VoiceUnit, out_sps: SampleRate) {
-        let envelope = &(voice_unit).envelope;
+    pub fn recalc_envelope(&mut self, out_sps: SampleRate, envelope: &EnvelopeSrc) {
         let Some((prepared, head)) = envelope.to_prepared(out_sps) else {
             // We want to be able to remove envelopes when the envelope source is empty
             self.env = Vec::new();
@@ -60,7 +64,7 @@ impl VoiceInstance {
         }
     }
     /// Recalculate the sample buffer from [`WaveData`].
-    pub fn recalc_wave_data(&mut self, wave: &WaveData, volume: i16, pan: i16) {
+    pub fn recalc_wave_data(&mut self, wave: &WaveDataInner, volume: i16, pan: i16) {
         self.num_samples = 400;
         let size = self.num_samples * 2 * 2;
         self.sample_buf = vec![0; size as usize];
@@ -174,12 +178,6 @@ pub struct VoiceUnit {
     pub tuning: f32,
     /// Various properties of the voice that can be set
     pub flags: VoiceFlags,
-    /// The data the voice envelope is generated from
-    ///
-    /// Note: The envelope is only used by [`Wave`](crate::VoiceData::Wave) voices.
-    ///
-    /// If you try to serialize the envelope, it will be ignored if the voice type isn't `Wave`.
-    pub envelope: EnvelopeSrc,
 }
 
 impl Default for VoiceUnit {
@@ -188,7 +186,6 @@ impl Default for VoiceUnit {
             basic_key: DEFAULT_BASICKEY.cast_signed(),
             tuning: 1.0,
             flags: VoiceFlags::SMOOTH,
-            envelope: EnvelopeSrc::default(),
             volume: 0,
             pan: 0,
         }
@@ -296,8 +293,8 @@ impl Voice {
                     inst.sample_buf = noise_to_pcm(ptn, ptn_bldr).into_sample_buf();
                     inst.num_samples = ptn.smp_num_44k;
                 }
-                VoiceData::Wave(wave) => {
-                    inst.recalc_wave_data(wave, unit.volume, unit.pan);
+                VoiceData::Wave(data) => {
+                    inst.recalc_wave_data(&data.inner, unit.volume, unit.pan);
                 }
                 VoiceData::OggV(ogg_vdata) => {
                     #[cfg(feature = "oggv")]
@@ -319,8 +316,10 @@ impl Voice {
     }
 
     pub(crate) fn tone_ready_envelopes(&mut self, sps: SampleRate) {
-        for VoiceSlot { unit, inst, .. } in self.slots_mut() {
-            inst.recalc_envelope(unit, sps);
+        for VoiceSlot { inst, data, .. } in self.slots_mut() {
+            if let VoiceData::Wave(data) = data {
+                inst.recalc_envelope(sps, &data.envelope);
+            }
         }
     }
     /// Recalculate the sample and envelope data for this voice
@@ -341,7 +340,7 @@ impl Voice {
 // Never allocate an envelope larger than this (1 megabyte)
 const ENV_SIZE_SAFETY_LIMIT: usize = 1_048_576;
 
-fn update_wave_ptv(wave: &WaveData, inst: &mut VoiceInstance, volume: i16, pan: i16) {
+fn update_wave_ptv(wave: &WaveDataInner, inst: &mut VoiceInstance, volume: i16, pan: i16) {
     let mut pan_volume: [i16; 2] = [64, 64];
 
     if pan > 64 {
@@ -359,11 +358,11 @@ fn update_wave_ptv(wave: &WaveData, inst: &mut VoiceInstance, volume: i16, pan: 
     let smp_buf_16: &mut [i16] = bytemuck::cast_slice_mut(&mut inst.sample_buf[..]);
     for s in 0..inst.num_samples {
         let osc = match wave {
-            WaveData::Coord {
+            WaveDataInner::Coord {
                 points: coordinates,
                 resolution,
             } => coord(osci, coordinates, s.try_into().unwrap(), *resolution),
-            WaveData::Overtone {
+            WaveDataInner::Overtone {
                 points: coordinates,
             } => overtone(osci, coordinates, s.try_into().unwrap()),
         };

@@ -437,7 +437,7 @@ fn write_voice(voice: &Voice, idx: usize, out: &mut Vec<u8>) -> WriteResult {
         crate::VoiceData::Noise(noise_data) => voice.write_mate_ptn(out, noise_data),
         // TODO: Ogg/vorbis is being serialized as PCM (because we also deserialize it as such)
         crate::VoiceData::Pcm(pcm_data) => voice.write_mate_pcm(out, pcm_data),
-        crate::VoiceData::Wave(_wave_data) => voice.write_mate_ptv(out)?,
+        crate::VoiceData::Wave { .. } => voice.write_mate_ptv(out)?,
         crate::VoiceData::OggV(oggv_data) => voice.write_mate_oggv(out, oggv_data),
     }
     // TODO: Fix this no name thingy?

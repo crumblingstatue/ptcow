@@ -6,7 +6,12 @@ use crate::{
     pulse_oscillator::OsciPt,
     result::{ProjectReadError, ProjectWriteError, ReadResult, WriteResult},
     voice::{EnvelopeSrc, Voice, VoiceFlags, VoiceSlot},
-    voice_data::{noise::NoiseData, oggv::OggVData, pcm::PcmData, wave::WaveData},
+    voice_data::{
+        noise::NoiseData,
+        oggv::OggVData,
+        pcm::PcmData,
+        wave::{WaveData, WaveDataInner},
+    },
 };
 
 #[cfg(feature = "oggv")]
@@ -259,22 +264,22 @@ impl Voice {
         write_varint(work2, out);
         write_varint(self.num_slots().into(), out);
         for VoiceSlot { unit, data, .. } in self.slots() {
+            let VoiceData::Wave(data) = data else {
+                unreachable!()
+            };
             write_varint(unit.basic_key.cast_unsigned(), out);
             write_varint(unit.volume.cast_unsigned().into(), out);
             write_varint(unit.pan.cast_unsigned().into(), out);
             write_varint(unit.tuning.to_bits(), out);
             write_varint(unit.flags.bits(), out);
             let mut data_flags = PTV_DATAFLAG_WAVE;
-            if !unit.envelope.points.is_empty() {
+            if !data.envelope.points.is_empty() {
                 data_flags |= PTV_DATAFLAG_ENVELOPE;
             }
             write_varint(data_flags, out);
-            let VoiceData::Wave(wave_data) = data else {
-                unreachable!()
-            };
-            write_wave(wave_data, out)?;
-            if !unit.envelope.points.is_empty() {
-                write_envelope(&unit.envelope, out);
+            write_wave(&data.inner, out)?;
+            if !data.envelope.points.is_empty() {
+                write_envelope(&data.envelope, out);
             }
         }
         let current_offset = out.len();
@@ -311,33 +316,39 @@ impl Voice {
 }
 
 fn read_wave_slot(rd: &mut crate::io::Reader) -> ReadResult<VoiceSlot> {
-    let mut vu = VoiceUnit {
+    let vu = VoiceUnit {
         basic_key: rd.next_varint()?.cast_signed(),
         volume: rd.next_varint()?.cast_signed().try_into().unwrap(),
         pan: rd.next_varint()?.cast_signed().try_into().unwrap(),
         tuning: f32::from_bits(rd.next_varint()?),
         flags: VoiceFlags::from_bits_retain(rd.next_varint()?),
-        ..VoiceUnit::default()
     };
     let data_flags = rd.next_varint()?;
-    let data = if data_flags & PTV_DATAFLAG_WAVE != 0 {
-        let mut wave_data = WaveData::Coord {
+    let wave_data_inner = if data_flags & PTV_DATAFLAG_WAVE != 0 {
+        let mut wave_data = WaveDataInner::Coord {
             points: Vec::new(),
             resolution: 0,
         };
         read_wave(rd, &mut wave_data)?;
-        VoiceData::Wave(wave_data)
+        wave_data
     } else {
         // fallback empty wave data
-        VoiceData::Wave(WaveData::Coord {
+        WaveDataInner::Coord {
             points: Vec::new(),
             resolution: 0,
-        })
+        }
     };
+    let mut envelope = EnvelopeSrc::default();
     if data_flags & PTV_DATAFLAG_ENVELOPE != 0 {
-        read_envelope(rd, &mut vu.envelope)?;
+        read_envelope(rd, &mut envelope)?;
     }
-    Ok(VoiceSlot::from_unit_and_data(vu, data))
+    Ok(VoiceSlot::from_unit_and_data(
+        vu,
+        VoiceData::Wave(WaveData {
+            inner: wave_data_inner,
+            envelope,
+        }),
+    ))
 }
 
 #[derive(Clone, Copy, bytemuck::AnyBitPattern, bytemuck::NoUninit)]
@@ -349,7 +360,7 @@ struct IoOggv {
     tuning: f32,
 }
 
-fn read_wave(rd: &mut crate::io::Reader, wave_data: &mut WaveData) -> ReadResult {
+fn read_wave(rd: &mut crate::io::Reader, wave_data: &mut WaveDataInner) -> ReadResult {
     let kind = rd.next_varint()?;
     *wave_data = match kind {
         0 => {
@@ -360,7 +371,7 @@ fn read_wave(rd: &mut crate::io::Reader, wave_data: &mut WaveData) -> ReadResult
                 pt.x = u16::from(rd.next::<u8>()?);
                 pt.y = i16::from(rd.next::<i8>()?);
             }
-            WaveData::Coord {
+            WaveDataInner::Coord {
                 resolution: reso.try_into().unwrap(),
                 points,
             }
@@ -376,7 +387,7 @@ fn read_wave(rd: &mut crate::io::Reader, wave_data: &mut WaveData) -> ReadResult
                 pt.y = i16::try_from(y.cast_signed())
                     .map_err(|_| ProjectReadError::OvertonePointOutOfRange(y))?;
             }
-            WaveData::Overtone { points }
+            WaveDataInner::Overtone { points }
         }
         _ => panic!("Invalid/unsupported type: {kind}"),
     };
@@ -384,9 +395,9 @@ fn read_wave(rd: &mut crate::io::Reader, wave_data: &mut WaveData) -> ReadResult
     Ok(())
 }
 
-fn write_wave(wave_data: &WaveData, out: &mut Vec<u8>) -> WriteResult {
+fn write_wave(wave_data: &WaveDataInner, out: &mut Vec<u8>) -> WriteResult {
     match wave_data {
-        WaveData::Coord {
+        WaveDataInner::Coord {
             resolution,
             points: coordinates,
         } => {
@@ -405,7 +416,7 @@ fn write_wave(wave_data: &WaveData, out: &mut Vec<u8>) -> WriteResult {
                 out.push(y.cast_unsigned());
             }
         }
-        WaveData::Overtone {
+        WaveDataInner::Overtone {
             points: coordinates,
         } => {
             write_varint(1, out);
