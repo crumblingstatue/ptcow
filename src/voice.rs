@@ -10,7 +10,7 @@ use crate::{
         noise::NoiseData,
         oggv::OggVData,
         pcm::PcmData,
-        wave::{WaveData, WaveDataInner},
+        wave::{WaveData, WaveDataPoints},
     },
 };
 
@@ -64,7 +64,7 @@ impl VoiceInstance {
         }
     }
     /// Recalculate the sample buffer from [`WaveData`].
-    pub fn recalc_wave_data(&mut self, wave: &WaveDataInner, volume: i16, pan: i16) {
+    pub fn recalc_wave_data(&mut self, wave: &WaveDataPoints, volume: i16, pan: i16) {
         self.num_samples = 400;
         let size = self.num_samples * 2 * 2;
         self.sample_buf = vec![0; size as usize];
@@ -294,7 +294,7 @@ impl Voice {
                     inst.num_samples = ptn.smp_num_44k;
                 }
                 VoiceData::Wave(data) => {
-                    inst.recalc_wave_data(&data.inner, unit.volume, unit.pan);
+                    inst.recalc_wave_data(&data.points, unit.volume, unit.pan);
                 }
                 VoiceData::OggV(ogg_vdata) => {
                     #[cfg(feature = "oggv")]
@@ -340,7 +340,7 @@ impl Voice {
 // Never allocate an envelope larger than this (1 megabyte)
 const ENV_SIZE_SAFETY_LIMIT: usize = 1_048_576;
 
-fn update_wave_ptv(wave: &WaveDataInner, inst: &mut VoiceInstance, volume: i16, pan: i16) {
+fn update_wave_ptv(wave: &WaveDataPoints, inst: &mut VoiceInstance, volume: i16, pan: i16) {
     let mut pan_volume: [i16; 2] = [64, 64];
 
     if pan > 64 {
@@ -358,11 +358,11 @@ fn update_wave_ptv(wave: &WaveDataInner, inst: &mut VoiceInstance, volume: i16, 
     let smp_buf_16: &mut [i16] = bytemuck::cast_slice_mut(&mut inst.sample_buf[..]);
     for s in 0..inst.num_samples {
         let osc = match wave {
-            WaveDataInner::Coord {
+            WaveDataPoints::Coord {
                 points: coordinates,
                 resolution,
             } => coord(osci, coordinates, s.try_into().unwrap(), *resolution),
-            WaveDataInner::Overtone {
+            WaveDataPoints::Overtone {
                 points: coordinates,
             } => overtone(osci, coordinates, s.try_into().unwrap()),
         };

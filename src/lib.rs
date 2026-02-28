@@ -53,7 +53,7 @@ pub use {
         noise::{NoiseData, NoiseDesignUnit, NoiseDesignUnitFlags},
         oggv::OggVData,
         pcm::PcmData,
-        wave::WaveDataInner,
+        wave::{WaveData, WaveDataPoints},
     },
 };
 

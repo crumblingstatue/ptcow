@@ -1,14 +1,17 @@
 use crate::{EnvelopeSrc, pulse_oscillator::OsciPt};
 
+/// How to generate a wave voice
 #[derive(Clone)]
 pub struct WaveData {
-    pub inner: WaveDataInner,
+    /// The points of the wave
+    pub points: WaveDataPoints,
+    /// The envelope of the wave
     pub envelope: EnvelopeSrc,
 }
 
-/// What kind of wave to generate
+/// Defines the points of the wave
 #[derive(Clone)]
-pub enum WaveDataInner {
+pub enum WaveDataPoints {
     /// Wave generated with [`coord`](crate::coord).
     Coord {
         /// The points to generate the wave from.
