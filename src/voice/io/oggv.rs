@@ -22,7 +22,6 @@ pub fn read(
         flags: io_oggv.voice_flags,
         basic_key: i32::from(io_oggv.basic_key),
         tuning: io_oggv.tuning,
-        ..VoiceUnit::default()
     };
     VoiceSlot::from_unit_and_data(unit, data)
 }

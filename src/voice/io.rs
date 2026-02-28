@@ -71,7 +71,6 @@ impl Voice {
             flags: pcm.voice_flags,
             basic_key: i32::from(pcm.basic_key),
             tuning: pcm.tuning,
-            ..VoiceUnit::default()
         };
         Ok(Self::from_unit_and_data(vu, VoiceData::Pcm(pcm_data)))
     }
@@ -124,7 +123,6 @@ impl Voice {
             flags: ptn.voice_flags,
             basic_key: i32::from(ptn.basic_key),
             tuning: ptn.tuning,
-            ..VoiceUnit::default()
         };
         Ok(Self::from_unit_and_data(vu, VoiceData::Noise(noise_data)))
     }
@@ -268,8 +266,8 @@ impl Voice {
                 unreachable!()
             };
             write_varint(unit.basic_key.cast_unsigned(), out);
-            write_varint(unit.volume.cast_unsigned().into(), out);
-            write_varint(unit.pan.cast_unsigned().into(), out);
+            write_varint(data.volume.cast_unsigned().into(), out);
+            write_varint(data.pan.cast_unsigned().into(), out);
             write_varint(unit.tuning.to_bits(), out);
             write_varint(unit.flags.bits(), out);
             let mut data_flags = PTV_DATAFLAG_WAVE;
@@ -316,12 +314,15 @@ impl Voice {
 }
 
 fn read_wave_slot(rd: &mut crate::io::Reader) -> ReadResult<VoiceSlot> {
+    let basic_key = rd.next_varint()?.cast_signed();
+    let volume = rd.next_varint()?.cast_signed().try_into().unwrap();
+    let pan = rd.next_varint()?.cast_signed().try_into().unwrap();
+    let tuning = f32::from_bits(rd.next_varint()?);
+    let flags = VoiceFlags::from_bits_retain(rd.next_varint()?);
     let vu = VoiceUnit {
-        basic_key: rd.next_varint()?.cast_signed(),
-        volume: rd.next_varint()?.cast_signed().try_into().unwrap(),
-        pan: rd.next_varint()?.cast_signed().try_into().unwrap(),
-        tuning: f32::from_bits(rd.next_varint()?),
-        flags: VoiceFlags::from_bits_retain(rd.next_varint()?),
+        basic_key,
+        tuning,
+        flags,
     };
     let data_flags = rd.next_varint()?;
     let wave_data_inner = if data_flags & PTV_DATAFLAG_WAVE != 0 {
@@ -347,6 +348,8 @@ fn read_wave_slot(rd: &mut crate::io::Reader) -> ReadResult<VoiceSlot> {
         VoiceData::Wave(WaveData {
             points: wave_data_inner,
             envelope,
+            volume,
+            pan,
         }),
     ))
 }

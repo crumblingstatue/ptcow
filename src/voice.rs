@@ -170,10 +170,6 @@ pub struct VoiceUnit {
     /// The native key of this voice. If not set correctly, the voice might sound
     /// off-key, or too low/high pitch when notes are being played with it.
     pub basic_key: Key,
-    /// Volume to generate the samples with
-    pub volume: i16,
-    /// Panning
-    pub pan: i16,
     /// Fine tuning of the pitch
     pub tuning: f32,
     /// Various properties of the voice that can be set
@@ -186,8 +182,6 @@ impl Default for VoiceUnit {
             basic_key: DEFAULT_BASICKEY.cast_signed(),
             tuning: 1.0,
             flags: VoiceFlags::SMOOTH,
-            volume: 0,
-            pan: 0,
         }
     }
 }
@@ -280,7 +274,7 @@ impl Voice {
         }
     }
     pub(crate) fn tone_ready_sample(&mut self, ptn_bldr: &NoiseTable) {
-        for VoiceSlot { unit, inst, data } in self.slots_mut() {
+        for VoiceSlot { inst, data, .. } in self.slots_mut() {
             inst.num_samples = 0;
 
             match data {
@@ -294,7 +288,7 @@ impl Voice {
                     inst.num_samples = ptn.smp_num_44k;
                 }
                 VoiceData::Wave(data) => {
-                    inst.recalc_wave_data(&data.points, unit.volume, unit.pan);
+                    inst.recalc_wave_data(&data.points, data.volume, data.pan);
                 }
                 VoiceData::OggV(ogg_vdata) => {
                     #[cfg(feature = "oggv")]

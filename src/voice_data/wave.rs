@@ -7,6 +7,10 @@ pub struct WaveData {
     pub points: WaveDataPoints,
     /// The envelope of the wave
     pub envelope: EnvelopeSrc,
+    /// Volume to generate the samples with
+    pub volume: i16,
+    /// Panning
+    pub pan: i16,
 }
 
 /// Defines the points of the wave
