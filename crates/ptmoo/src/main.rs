@@ -147,25 +147,20 @@ fn print(
         let val: i32 = unit.pan_time_bufs.iter().flatten().sum();
         let name: &str = &unit.name;
         let voice = &ins.voices[unit.voice_idx];
-        for (i, slot) in voice.slots().enumerate() {
-            let kind = match &slot.data {
-                VoiceData::Noise(_) => "🥁",
-                VoiceData::Pcm(_) => "🎤",
-                VoiceData::Wave(_) => "〰️",
-                VoiceData::OggV(_) => "🐠", // Ogg/Vorbis logo is a fish
-            };
-            let ratio = f64::from(val.abs()) / 4_194_304.0;
-            #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
-            let n_moo = (ratio * 64.).ceil() as usize;
-            let fill = " ".repeat(name_max - nw);
-            let moo = "🐄".repeat(n_moo);
-            let (name, cow) = if i == 0 {
-                (name, "🐮")
-            } else {
-                (&*" ".repeat(nw), "╰─")
-            };
-            writeln!(stderr, "{cow}{name}{fill} {kind} {moo}")?;
-        }
+        let data_emoji = match voice.base.data {
+            VoiceData::Noise(_) => "🥁",
+            VoiceData::Pcm(_) => "🎤",
+            VoiceData::Wave(_) => "〰️",
+            VoiceData::OggV(_) => "🐠", // Ogg/Vorbis logo is a fish
+        };
+
+        let ratio = f64::from(val.abs()) / 4_194_304.0;
+        #[expect(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+        let n_moo = (ratio * 64.).ceil() as usize;
+        let fill = " ".repeat(name_max - nw);
+        let moo = "🐄".repeat(n_moo);
+        let opt_2 = if voice.extra.is_some() { "x2" } else { "  " };
+        writeln!(stderr, "🐮{name}{fill} {data_emoji} {opt_2} {moo}")?;
     }
     stderr.queue(cursor::MoveTo(0, 0))?;
     Ok(())
