@@ -147,7 +147,7 @@ fn print(
         let val: i32 = unit.pan_time_bufs.iter().flatten().sum();
         let name: &str = &unit.name;
         let voice = &ins.voices[unit.voice_idx];
-        for (i, slot) in voice.slots.iter().enumerate() {
+        for (i, slot) in voice.slots().enumerate() {
             let kind = match &slot.data {
                 VoiceData::Noise(_) => "🥁",
                 VoiceData::Pcm(_) => "🎤",

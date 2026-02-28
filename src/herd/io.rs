@@ -433,7 +433,7 @@ fn read_voice(ins: &mut MooInstructions, rd: &mut Reader, kind: IoVoiceType) -> 
 }
 
 fn write_voice(voice: &Voice, idx: usize, out: &mut Vec<u8>) -> WriteResult {
-    match &voice.slots[0].data {
+    match &voice.base.data {
         crate::VoiceData::Noise(noise_data) => voice.write_mate_ptn(out, noise_data),
         // TODO: Ogg/vorbis is being serialized as PCM (because we also deserialize it as such)
         crate::VoiceData::Pcm(pcm_data) => voice.write_mate_pcm(out, pcm_data),

@@ -1,7 +1,5 @@
 mod io;
 
-use arrayvec::ArrayVec;
-
 use crate::{
     Key, NATIVE_SAMPLE_RATE, SampleRate,
     event::DEFAULT_BASICKEY,
@@ -235,8 +233,10 @@ pub struct VoiceTone {
 /// Audio data that gives [`Unit`](crate::Unit)s a voice. In other words, an instrument.
 #[derive(Clone)]
 pub struct Voice {
-    /// Wave voices can have 1 or 2 slots, other voice types have 1
-    pub slots: ArrayVec<VoiceSlot, 2>,
+    /// The base slot every voice has
+    pub base: VoiceSlot,
+    /// Wave voices can have an extra slot
+    pub extra: Option<VoiceSlot>,
     /// Name of the voice
     pub name: String,
 }
@@ -268,12 +268,7 @@ impl Voice {
     /// Create a voice with a single slot containing `unit`
     #[must_use]
     pub fn from_unit_and_data(unit: VoiceUnit, data: VoiceData) -> Self {
-        let mut slots = ArrayVec::new();
-        slots.push(VoiceSlot::from_unit_and_data(unit, data));
-        Self {
-            slots,
-            name: "<no name>".into(),
-        }
+        Self::from_slot(VoiceSlot::from_unit_and_data(unit, data))
     }
     /// Create a voice with a single slot containing `data`
     #[must_use]
@@ -281,15 +276,14 @@ impl Voice {
         Self::from_unit_and_data(VoiceUnit::default(), data)
     }
     fn from_slot(slot: VoiceSlot) -> Self {
-        let mut slots = ArrayVec::new();
-        slots.push(slot);
         Self {
-            slots,
+            base: slot,
+            extra: None,
             name: "<no name>".into(),
         }
     }
     pub(crate) fn tone_ready_sample(&mut self, ptn_bldr: &NoiseTable) {
-        for VoiceSlot { unit, inst, data } in &mut self.slots {
+        for VoiceSlot { unit, inst, data } in self.slots_mut() {
             inst.num_samples = 0;
 
             match data {
@@ -325,7 +319,7 @@ impl Voice {
     }
 
     pub(crate) fn tone_ready_envelopes(&mut self, sps: SampleRate) {
-        for VoiceSlot { unit, inst, .. } in &mut self.slots {
+        for VoiceSlot { unit, inst, .. } in self.slots_mut() {
             inst.recalc_envelope(unit, sps);
         }
     }
@@ -333,6 +327,14 @@ impl Voice {
     pub fn recalculate(&mut self, noise_tbl: &NoiseTable, out_sps: SampleRate) {
         self.tone_ready_sample(noise_tbl);
         self.tone_ready_envelopes(out_sps);
+    }
+    /// Returns an immutable iterator over the slots of this voice
+    pub fn slots(&self) -> impl Iterator<Item = &VoiceSlot> {
+        std::iter::once(&self.base).chain(&self.extra)
+    }
+    /// Returns a mutable iterator over the slots of this voice
+    pub fn slots_mut(&mut self) -> impl Iterator<Item = &mut VoiceSlot> {
+        std::iter::once(&mut self.base).chain(&mut self.extra)
     }
 }
 

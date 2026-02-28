@@ -1,5 +1,3 @@
-use arrayvec::ArrayVec;
-
 use crate::{
     Bps, ChNum, SampleRate, VoiceData, VoiceUnit,
     herd::Tag,
@@ -78,7 +76,7 @@ impl Voice {
         #[expect(clippy::cast_possible_truncation)]
         let io_size: u32 = size_of::<IoPcm>() as u32 + data.smp.len() as u32;
         out.extend_from_slice(&io_size.to_le_bytes());
-        let vu = &self.slots[0].unit;
+        let vu = &self.base.unit;
         let io_pcm = IoPcm {
             x3x_unit_no: 0,
             basic_key: vu.basic_key.try_into().unwrap(),
@@ -131,7 +129,7 @@ impl Voice {
         let io_size_pos = out.len();
         // Placeholder for io size
         out.extend_from_slice(&[0; 4]);
-        let vu = &self.slots[0].unit;
+        let vu = &self.base.unit;
         let ptn = IoPtn {
             x3x_unit_no: 0,
             basic_key: vu.basic_key.try_into().unwrap(),
@@ -183,9 +181,9 @@ impl Voice {
         out.extend_from_slice(&size.to_le_bytes());
         let io_oggv: IoOggv = IoOggv {
             xxx: 0,
-            basic_key: self.slots[0].unit.basic_key.try_into().unwrap(),
-            voice_flags: self.slots[0].unit.flags,
-            tuning: self.slots[0].unit.tuning,
+            basic_key: self.base.unit.basic_key.try_into().unwrap(),
+            voice_flags: self.base.unit.flags,
+            tuning: self.base.unit.tuning,
         };
         out.extend_from_slice(bytemuck::bytes_of(&io_oggv));
         let ch: i32 = data.ch;
@@ -235,38 +233,13 @@ impl Voice {
             1 | 2 => {}
             _ => return Err(ProjectReadError::FmtUnknown),
         }
-        let mut slots = ArrayVec::new();
-        for _ in 0..num {
-            let mut vu = VoiceUnit {
-                basic_key: rd.next_varint()?.cast_signed(),
-                volume: rd.next_varint()?.cast_signed().try_into().unwrap(),
-                pan: rd.next_varint()?.cast_signed().try_into().unwrap(),
-                tuning: f32::from_bits(rd.next_varint()?),
-                flags: VoiceFlags::from_bits_retain(rd.next_varint()?),
-                ..VoiceUnit::default()
-            };
-            let data_flags = rd.next_varint()?;
-            let data = if data_flags & PTV_DATAFLAG_WAVE != 0 {
-                let mut wave_data = WaveData::Coord {
-                    points: Vec::new(),
-                    resolution: 0,
-                };
-                read_wave(rd, &mut wave_data)?;
-                VoiceData::Wave(wave_data)
-            } else {
-                // fallback empty wave data
-                VoiceData::Wave(WaveData::Coord {
-                    points: Vec::new(),
-                    resolution: 0,
-                })
-            };
-            if data_flags & PTV_DATAFLAG_ENVELOPE != 0 {
-                read_envelope(rd, &mut vu.envelope)?;
-            }
-            slots.push(VoiceSlot::from_unit_and_data(vu, data));
-        }
         Ok(Self {
-            slots,
+            base: read_wave_slot(rd)?,
+            extra: if num == 2 {
+                Some(read_wave_slot(rd)?)
+            } else {
+                None
+            },
             name: "<no name>".into(),
         })
     }
@@ -284,10 +257,8 @@ impl Voice {
         let work2: u32 = 0;
         write_varint(work1, out);
         write_varint(work2, out);
-        #[expect(clippy::cast_possible_truncation)]
-        let ch_num: u32 = self.slots.len() as u32;
-        write_varint(ch_num, out);
-        for VoiceSlot { unit, data, .. } in &self.slots {
+        write_varint(self.num_slots().into(), out);
+        for VoiceSlot { unit, data, .. } in self.slots() {
             write_varint(unit.basic_key.cast_unsigned(), out);
             write_varint(unit.volume.cast_unsigned().into(), out);
             write_varint(unit.pan.cast_unsigned().into(), out);
@@ -333,6 +304,40 @@ impl Voice {
             Err(ProjectReadError::OggvSupportDisabled)
         }
     }
+
+    const fn num_slots(&self) -> u8 {
+        if self.extra.is_some() { 2 } else { 1 }
+    }
+}
+
+fn read_wave_slot(rd: &mut crate::io::Reader) -> ReadResult<VoiceSlot> {
+    let mut vu = VoiceUnit {
+        basic_key: rd.next_varint()?.cast_signed(),
+        volume: rd.next_varint()?.cast_signed().try_into().unwrap(),
+        pan: rd.next_varint()?.cast_signed().try_into().unwrap(),
+        tuning: f32::from_bits(rd.next_varint()?),
+        flags: VoiceFlags::from_bits_retain(rd.next_varint()?),
+        ..VoiceUnit::default()
+    };
+    let data_flags = rd.next_varint()?;
+    let data = if data_flags & PTV_DATAFLAG_WAVE != 0 {
+        let mut wave_data = WaveData::Coord {
+            points: Vec::new(),
+            resolution: 0,
+        };
+        read_wave(rd, &mut wave_data)?;
+        VoiceData::Wave(wave_data)
+    } else {
+        // fallback empty wave data
+        VoiceData::Wave(WaveData::Coord {
+            points: Vec::new(),
+            resolution: 0,
+        })
+    };
+    if data_flags & PTV_DATAFLAG_ENVELOPE != 0 {
+        read_envelope(rd, &mut vu.envelope)?;
+    }
+    Ok(VoiceSlot::from_unit_and_data(vu, data))
 }
 
 #[derive(Clone, Copy, bytemuck::AnyBitPattern, bytemuck::NoUninit)]

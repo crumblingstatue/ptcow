@@ -184,7 +184,7 @@ impl Unit {
             return;
         };
 
-        for (slot, voice_tone) in zip(&voice.slots, &mut self.tones) {
+        for (slot, voice_tone) in zip(voice.slots(), &mut self.tones) {
             let voice_inst = &slot.inst;
             if voice_tone.life_count > 0 && !voice_inst.env.is_empty() {
                 if voice_tone.on_count > 0 {
@@ -278,7 +278,7 @@ impl Unit {
                 ..
             },
             voice_tone,
-        ) in zip(&voice.slots, &mut self.tones)
+        ) in zip(voice.slots(), &mut self.tones)
         {
             if voice_tone.life_count > 0 {
                 voice_tone.life_count -= 1;
@@ -339,7 +339,7 @@ impl Unit {
             return;
         };
 
-        for (VoiceSlot { unit: vu, inst, .. }, tone) in zip(&voice.slots, &mut self.tones) {
+        for (VoiceSlot { unit: vu, inst, .. }, tone) in zip(voice.slots(), &mut self.tones) {
             tone.life_count = 0;
             tone.on_count = 0;
             tone.smp_pos = 0.0;
@@ -375,7 +375,7 @@ impl Unit {
                     ..
                 },
                 voice_tone,
-            ) in zip(&voice.slots, &self.tones)
+            ) in zip(voice.slots(), &self.tones)
             {
                 // Prevent bytemuck alignment mismatch for empty `smp_w`
                 // Should (probably) only happen on dummy read (unimplemented) features.
