@@ -1,6 +1,6 @@
 use {
     super::IoOggv,
-    crate::{VoiceData, VoiceUnit, voice_data::oggv::OggVData},
+    crate::{VoiceData, VoiceSlot, VoiceUnit, voice_data::oggv::OggVData},
 };
 
 pub fn read(
@@ -10,7 +10,7 @@ pub fn read(
     ch: i32,
     sps2: i32,
     smp_num: i32,
-) -> VoiceUnit {
+) -> VoiceSlot {
     let data = VoiceData::OggV(OggVData {
         raw_bytes: rd.data[rd.cur..rd.cur + size].to_vec(),
         ch,
@@ -18,11 +18,11 @@ pub fn read(
         smp_num,
     });
     rd.cur += size;
-    VoiceUnit {
-        data,
+    let unit = VoiceUnit {
         flags: io_oggv.voice_flags,
         basic_key: i32::from(io_oggv.basic_key),
         tuning: io_oggv.tuning,
-        ..VoiceUnit::defaults()
-    }
+        ..VoiceUnit::default()
+    };
+    VoiceSlot::from_unit_and_data(unit, data)
 }

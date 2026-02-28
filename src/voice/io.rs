@@ -65,13 +65,12 @@ impl Voice {
         let smp_buf = pcm_data.sample_mut();
         rd.fill_slice(smp_buf)?;
         let vu = VoiceUnit {
-            data: VoiceData::Pcm(pcm_data),
             flags: pcm.voice_flags,
             basic_key: i32::from(pcm.basic_key),
             tuning: pcm.tuning,
-            ..VoiceUnit::defaults()
+            ..VoiceUnit::default()
         };
-        Ok(Self::from_unit(vu))
+        Ok(Self::from_unit_and_data(vu, VoiceData::Pcm(pcm_data)))
     }
 
     pub(crate) fn write_mate_pcm(&self, out: &mut Vec<u8>, data: &PcmData) {
@@ -119,13 +118,12 @@ impl Voice {
         let mut noise_data = NoiseData::new();
         noise_data.read(rd)?;
         let vu = VoiceUnit {
-            data: VoiceData::Noise(noise_data),
             flags: ptn.voice_flags,
             basic_key: i32::from(ptn.basic_key),
             tuning: ptn.tuning,
-            ..VoiceUnit::defaults()
+            ..VoiceUnit::default()
         };
-        Ok(Self::from_unit(vu))
+        Ok(Self::from_unit_and_data(vu, VoiceData::Noise(noise_data)))
     }
 
     pub(crate) fn write_mate_ptn(&self, out: &mut Vec<u8>, data: &NoiseData) {
@@ -245,21 +243,27 @@ impl Voice {
                 pan: rd.next_varint()?.cast_signed().try_into().unwrap(),
                 tuning: f32::from_bits(rd.next_varint()?),
                 flags: VoiceFlags::from_bits_retain(rd.next_varint()?),
-                ..VoiceUnit::defaults()
+                ..VoiceUnit::default()
             };
             let data_flags = rd.next_varint()?;
-            if data_flags & PTV_DATAFLAG_WAVE != 0 {
+            let data = if data_flags & PTV_DATAFLAG_WAVE != 0 {
                 let mut wave_data = WaveData::Coord {
                     points: Vec::new(),
                     resolution: 0,
                 };
                 read_wave(rd, &mut wave_data)?;
-                vu.data = VoiceData::Wave(wave_data);
-            }
+                VoiceData::Wave(wave_data)
+            } else {
+                // fallback empty wave data
+                VoiceData::Wave(WaveData::Coord {
+                    points: Vec::new(),
+                    resolution: 0,
+                })
+            };
             if data_flags & PTV_DATAFLAG_ENVELOPE != 0 {
                 read_envelope(rd, &mut vu.envelope)?;
             }
-            slots.push(VoiceSlot::from_unit(vu));
+            slots.push(VoiceSlot::from_unit_and_data(vu, data));
         }
         Ok(Self {
             slots,
@@ -283,7 +287,7 @@ impl Voice {
         #[expect(clippy::cast_possible_truncation)]
         let ch_num: u32 = self.slots.len() as u32;
         write_varint(ch_num, out);
-        for VoiceSlot { unit, .. } in &self.slots {
+        for VoiceSlot { unit, data, .. } in &self.slots {
             write_varint(unit.basic_key.cast_unsigned(), out);
             write_varint(unit.volume.cast_unsigned().into(), out);
             write_varint(unit.pan.cast_unsigned().into(), out);
@@ -294,7 +298,7 @@ impl Voice {
                 data_flags |= PTV_DATAFLAG_ENVELOPE;
             }
             write_varint(data_flags, out);
-            let VoiceData::Wave(wave_data) = &unit.data else {
+            let VoiceData::Wave(wave_data) = data else {
                 unreachable!()
             };
             write_wave(wave_data, out)?;
@@ -321,8 +325,8 @@ impl Voice {
         }
         #[cfg(feature = "oggv")]
         {
-            let unit = oggv::read(rd, &io_oggv, size as usize, ch, sps2, smp_num);
-            Ok(Self::from_unit(unit))
+            let slot = oggv::read(rd, &io_oggv, size as usize, ch, sps2, smp_num);
+            Ok(Self::from_slot(slot))
         }
         #[cfg(not(feature = "oggv"))]
         {

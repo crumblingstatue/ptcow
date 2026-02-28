@@ -275,6 +275,7 @@ impl Unit {
             VoiceSlot {
                 unit: vu,
                 inst: vinst,
+                ..
             },
             voice_tone,
         ) in zip(&voice.slots, &mut self.tones)
@@ -338,7 +339,7 @@ impl Unit {
             return;
         };
 
-        for (VoiceSlot { unit: vu, inst }, tone) in zip(&voice.slots, &mut self.tones) {
+        for (VoiceSlot { unit: vu, inst, .. }, tone) in zip(&voice.slots, &mut self.tones) {
             tone.life_count = 0;
             tone.on_count = 0;
             tone.smp_pos = 0.0;
@@ -371,6 +372,7 @@ impl Unit {
                 VoiceSlot {
                     unit: vu,
                     inst: voice_inst,
+                    ..
                 },
                 voice_tone,
             ) in zip(&voice.slots, &self.tones)

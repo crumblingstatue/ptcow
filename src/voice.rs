@@ -176,8 +176,6 @@ pub struct VoiceUnit {
     pub tuning: f32,
     /// Various properties of the voice that can be set
     pub flags: VoiceFlags,
-    /// The data the voice samples are generated from
-    pub data: VoiceData,
     /// The data the voice envelope is generated from
     ///
     /// Note: The envelope is only used by [`Wave`](crate::VoiceData::Wave) voices.
@@ -186,16 +184,13 @@ pub struct VoiceUnit {
     pub envelope: EnvelopeSrc,
 }
 
-impl VoiceUnit {
-    /// Provides default values when constructing a new voice unit
-    #[must_use]
-    pub fn defaults() -> Self {
+impl Default for VoiceUnit {
+    fn default() -> Self {
         Self {
             basic_key: DEFAULT_BASICKEY.cast_signed(),
             tuning: 1.0,
             flags: VoiceFlags::SMOOTH,
             envelope: EnvelopeSrc::default(),
-            data: VoiceData::Noise(NoiseData::new()),
             volume: 0,
             pan: 0,
         }
@@ -253,14 +248,17 @@ pub struct Voice {
 pub struct VoiceSlot {
     /// Mostly static data required to generate the voice samples
     pub unit: VoiceUnit,
+    /// The data the voice samples are generated from
+    pub data: VoiceData,
     /// Dynamic data to keep track of voice play state
     pub inst: VoiceInstance,
 }
 
 impl VoiceSlot {
-    fn from_unit(unit: VoiceUnit) -> Self {
+    fn from_unit_and_data(unit: VoiceUnit, data: VoiceData) -> Self {
         Self {
             unit,
+            data,
             inst: VoiceInstance::default(),
         }
     }
@@ -269,9 +267,9 @@ impl VoiceSlot {
 impl Voice {
     /// Create a voice with a single slot containing `unit`
     #[must_use]
-    pub fn from_unit(unit: VoiceUnit) -> Self {
+    pub fn from_unit_and_data(unit: VoiceUnit, data: VoiceData) -> Self {
         let mut slots = ArrayVec::new();
-        slots.push(VoiceSlot::from_unit(unit));
+        slots.push(VoiceSlot::from_unit_and_data(unit, data));
         Self {
             slots,
             name: "<no name>".into(),
@@ -280,16 +278,21 @@ impl Voice {
     /// Create a voice with a single slot containing `data`
     #[must_use]
     pub fn from_data(data: VoiceData) -> Self {
-        Self::from_unit(VoiceUnit {
-            data,
-            ..VoiceUnit::defaults()
-        })
+        Self::from_unit_and_data(VoiceUnit::default(), data)
+    }
+    fn from_slot(slot: VoiceSlot) -> Self {
+        let mut slots = ArrayVec::new();
+        slots.push(slot);
+        Self {
+            slots,
+            name: "<no name>".into(),
+        }
     }
     pub(crate) fn tone_ready_sample(&mut self, ptn_bldr: &NoiseTable) {
-        for VoiceSlot { unit, inst } in &mut self.slots {
+        for VoiceSlot { unit, inst, data } in &mut self.slots {
             inst.num_samples = 0;
 
-            match &mut unit.data {
+            match data {
                 VoiceData::Pcm(pcm) => {
                     let (body, buf) = pcm.to_converted(NATIVE_SAMPLE_RATE);
                     inst.num_samples = body;
@@ -322,7 +325,7 @@ impl Voice {
     }
 
     pub(crate) fn tone_ready_envelopes(&mut self, sps: SampleRate) {
-        for VoiceSlot { unit, inst } in &mut self.slots {
+        for VoiceSlot { unit, inst, .. } in &mut self.slots {
             inst.recalc_envelope(unit, sps);
         }
     }

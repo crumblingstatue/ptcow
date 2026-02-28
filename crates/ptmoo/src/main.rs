@@ -148,7 +148,7 @@ fn print(
         let name: &str = &unit.name;
         let voice = &ins.voices[unit.voice_idx];
         for (i, slot) in voice.slots.iter().enumerate() {
-            let kind = match &slot.unit.data {
+            let kind = match &slot.data {
                 VoiceData::Noise(_) => "🥁",
                 VoiceData::Pcm(_) => "🎤",
                 VoiceData::Wave(_) => "〰️",
