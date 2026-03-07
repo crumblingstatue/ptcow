@@ -53,7 +53,7 @@ pub enum ProjectWriteError {
     UnsupportedFmt,
     /// We internally store the points as 16 bit due to various reasons, but the PxTone
     /// format only supports 8 bit points for coord waves.
-    #[error("Coord wave point out of range (needs to be x=0..256 y=-127..128")]
+    #[error("Coord wave point out of range (needs to be x=0..256 y=-128..127")]
     CoordWavePointOutOfRange,
 }
 
