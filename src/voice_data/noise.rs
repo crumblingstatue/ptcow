@@ -62,7 +62,6 @@ impl NoiseData {
             design_unit = &mut self.units[u as usize];
             #[expect(clippy::cast_possible_truncation)]
             let flags = NoiseDesignUnitFlags::from_bits_retain(rd.next_varint()? as u8);
-            design_unit.ser_flags = flags;
 
             if flags.contains_unknown_bits() {
                 return Err(ProjectReadError::FmtUnknown);
@@ -108,12 +107,22 @@ impl NoiseData {
         let unit_num: u8 = self.units.len().try_into().unwrap();
         out.push(unit_num);
         for unit in &self.units {
-            let mut ser_flags = unit.ser_flags;
+            let mut ser_flags = NoiseDesignUnitFlags::empty();
             // We always serialize the envelope (seems to be PxTone behavior)
             ser_flags.insert(NoiseDesignUnitFlags::ENVELOPE);
             // We write the pan if it's not 0
             if unit.pan != 0 {
                 ser_flags.insert(NoiseDesignUnitFlags::PAN);
+            }
+            // For each oscillator, we write them if their volume or freq are not 0
+            if unit.main.volume != 0.0 || unit.main.freq != 0.0 {
+                ser_flags.insert(NoiseDesignUnitFlags::OSC_MAIN);
+            }
+            if unit.freq.volume != 0.0 || unit.freq.freq != 0.0 {
+                ser_flags.insert(NoiseDesignUnitFlags::OSC_FREQ);
+            }
+            if unit.volu.volume != 0.0 || unit.volu.freq != 0.0 {
+                ser_flags.insert(NoiseDesignUnitFlags::OSC_VOLU);
             }
             write_varint(ser_flags.bits().into(), out);
             let enve_num: u32 = unit.enves.len().try_into().unwrap();
@@ -255,12 +264,6 @@ pub struct NoiseDesignUnit {
     pub freq: NoiseDesignOscillator,
     /// Volume oscillator
     pub volu: NoiseDesignOscillator,
-    /// What fields to serialize
-    // TODO: Maybe it could be inferred, but at this point I'm not sure
-    // how to determine which fields to serialize.
-    // Turning the fields into `Option` didn't quite work out, as it seems
-    // the fields are treated as non-optional in a lot of cases.
-    pub ser_flags: NoiseDesignUnitFlags,
 }
 
 bitflags::bitflags! {
