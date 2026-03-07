@@ -520,7 +520,8 @@ fn write_assist_voice(voice: &Voice, idx: usize, out: &mut Vec<u8>) {
     out.extend_from_slice(&size.to_le_bytes());
     let mut name: [u8; MAX_TUNE_VOICE_NAME as usize] = [0; _];
     let shift_jis = SHIFT_JIS.encode(&voice.name).0;
-    name[..shift_jis.len()].copy_from_slice(&shift_jis);
+    let end = std::cmp::min(shift_jis.len(), name.len());
+    name[..end].copy_from_slice(&shift_jis[..end]);
     let assi = AssistVoice {
         voice_idx: idx.try_into().unwrap(),
         rrr: 0,
