@@ -193,6 +193,10 @@ impl Unit {
                         voice_tone.env_pos += 1;
                     }
                 } else {
+                    // Avoid divide by zero
+                    if voice_inst.env_release == 0 {
+                        continue;
+                    }
                     voice_tone.env_volume = (i32::from(voice_tone.env_start)
                         + (0 - i32::from(voice_tone.env_start)) * voice_tone.env_pos as i32
                             / i32::try_from(voice_inst.env_release).unwrap())
