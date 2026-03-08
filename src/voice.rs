@@ -137,34 +137,39 @@ pub struct EnvelopeSrc {
 }
 
 impl EnvelopeSrc {
-    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    fn to_prepared(&self, out_sps: SampleRate) -> Option<(Vec<u8>, usize)> {
+    fn to_prepared(&self, out_rate: SampleRate) -> Option<(Vec<u8>, usize)> {
         if self.points.is_empty() {
             return None;
         }
-        let mut size: u32 = 0;
 
-        let head = self.points.len().saturating_sub(1);
+        let tail = self.tail_index();
+        let mut prep_size = self.prepared_size(out_rate);
 
-        for e in 0..head {
-            size += u32::from(self.points[e].x);
-        }
-        let env_samples_per_second = size * u32::from(out_sps);
-        let mut env_size =
-            (f64::from(env_samples_per_second) / f64::from(self.seconds_per_point)) as usize;
-        if env_size == 0 {
-            env_size = 1;
+        if prep_size == 0 {
+            prep_size = 1;
         }
 
-        if env_size > ENV_SIZE_SAFETY_LIMIT {
-            eprintln!("EnvelopeSrc::to_prepared: env_size too large ({env_size}).");
+        if prep_size > ENV_SIZE_SAFETY_LIMIT {
+            eprintln!("EnvelopeSrc::to_prepared: env_size too large ({prep_size}).");
             return None;
         }
 
-        let (abs_points, head_num) = to_absolute(self, head, out_sps);
-        let mut prepared = vec![0; env_size];
+        let (abs_points, head_num) = to_absolute(self, tail, out_rate);
+        let mut prepared = vec![0; prep_size];
         to_prepared_envelope(&mut prepared, &abs_points, head_num);
-        Some((prepared, head))
+        Some((prepared, tail))
+    }
+    const fn tail_index(&self) -> usize {
+        self.points.len().saturating_sub(1)
+    }
+    /// Returns the size the prepared envelope would have
+    #[expect(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[must_use]
+    pub fn prepared_size(&self, out_rate: SampleRate) -> usize {
+        let size: u32 = self.points.iter().take(self.tail_index()).map(|pt| u32::from(pt.x)).sum();
+        let env_samples_per_second = size * u32::from(out_rate);
+
+        (f64::from(env_samples_per_second) / f64::from(self.seconds_per_point)) as usize
     }
 }
 
