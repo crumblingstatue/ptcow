@@ -108,8 +108,8 @@ pub struct Unit {
     pub tuning: f32,
     /// Which voice the unit should be playing
     pub voice_idx: VoiceIdx,
-    /// The voice tones for each channel
-    pub tones: [VoiceTone; MAX_CH_LEN],
+    /// Playback states corresponding to voice slots
+    pub tones: [VoiceTone; 2],
     /// Whether this unit is muted
     pub mute: bool,
 }
