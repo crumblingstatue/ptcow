@@ -118,7 +118,15 @@ fn do_next_event(
     dst_sps: SampleRate,
 ) -> ControlFlow<()> {
     let evt = &events[herd.evt_idx];
-    do_event(herd, ins, events, master, clock, dst_sps, evt, false)?;
+    do_event(
+        herd,
+        ins,
+        &events[herd.evt_idx + 1..],
+        master,
+        clock,
+        dst_sps,
+        evt,
+    )?;
     herd.evt_idx += 1;
     ControlFlow::Continue(())
 }
@@ -129,12 +137,11 @@ fn do_next_event(
 pub fn do_event(
     herd: &mut Herd,
     ins: &MooInstructions,
-    events: &[Event],
+    events_after: &[Event],
     master: &Master,
     clock: u32,
     dst_sps: u16,
     evt: &Event,
-    ignore_next_on: bool,
 ) -> ControlFlow<()> {
     let u = evt.unit;
     let Some(unit) = herd.units.get_mut(u) else {
@@ -143,16 +150,7 @@ pub fn do_event(
 
     match evt.payload {
         EventPayload::On { duration } => {
-            do_on_event(
-                herd,
-                ins,
-                events,
-                clock,
-                duration,
-                evt.unit,
-                evt.tick,
-                ignore_next_on,
-            );
+            do_on_event(herd, ins, events_after, clock, duration, evt.unit, evt.tick);
         }
         EventPayload::Key(key) => unit.tone_key(key),
         EventPayload::PanVol(vol) => unit.tone_pan_volume(vol),
@@ -180,12 +178,11 @@ pub fn do_event(
 fn do_on_event(
     herd: &mut Herd,
     ins: &MooInstructions,
-    events: &[Event],
+    events_after: &[Event],
     clock: Tick,
     duration: u32,
     u: UnitIdx,
     evt_tick: Tick,
-    ignore_next_on: bool,
 ) {
     let Some(unit) = herd.units.get_mut(u) else {
         return;
@@ -215,15 +212,13 @@ fn do_on_event(
                 + duration
                 + i32::try_from(tone.env_release_clock).unwrap();
             let mut next: Option<&Event> = None;
-            if !ignore_next_on {
-                for eve in &events[herd.evt_idx + 1..] {
-                    if i32::try_from(eve.tick).unwrap() > c {
-                        break;
-                    }
-                    if eve.unit == u && matches!((eve).payload, EventPayload::On { .. }) {
-                        next = Some(eve);
-                        break;
-                    }
+            for eve in events_after {
+                if i32::try_from(eve.tick).unwrap() > c {
+                    break;
+                }
+                if eve.unit == u && matches!((eve).payload, EventPayload::On { .. }) {
+                    next = Some(eve);
+                    break;
                 }
             }
             let max_life_count2 = match next {
