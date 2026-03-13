@@ -218,8 +218,10 @@ impl Unit {
             self.tones[ch].life_count = 0;
         }
     }
-
-    pub(crate) const fn tone_key(&mut self, key: Key) {
+    /// Set the key for this unit.
+    ///
+    /// Has the same effect as doing a [`Key`](crate::EventPayload::Key) event.
+    pub const fn set_key(&mut self, key: Key) {
         self.key_start = self.key_now;
         self.key_margin = key - self.key_start;
         self.porta_pos = 0;
@@ -416,6 +418,95 @@ impl Unit {
                 time_pan_buf += work;
             }
             self.pan_time_bufs[ch as usize][time_pan_index] = time_pan_buf;
+        }
+    }
+    /// Turn this unit "on" for the specified duration.
+    ///
+    /// Has the same effect as doing an [`On`](crate::EventPayload::On) event.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any of `clock`, `duration`, or `evt_tick` are so large that they
+    /// cannot be converted to a signed integer.
+    #[expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
+    pub fn on(
+        &mut self,
+        unit_idx: UnitIdx,
+        ins: &MooInstructions,
+        events_after: &[crate::Event],
+        clock: crate::Tick,
+        duration: u32,
+        evt_tick: crate::Tick,
+        end_sample: SampleT,
+    ) {
+        // We need a signed clock here for various calculations that can go below zero
+        let clock: i32 = clock.try_into().unwrap();
+        // Same for duration
+        let duration: i32 = duration.try_into().unwrap();
+        let on_count: i32 = ((i32::try_from(evt_tick).unwrap() + duration.saturating_sub(clock))
+            as f32
+            * ins.samples_per_tick) as i32;
+        if on_count <= 0 {
+            self.tone_zero_lives();
+            return;
+        }
+
+        self.tone_key_on();
+        let Some(voice) = ins.voices.get(self.voice_idx) else {
+            return;
+        };
+        for (slot, tone) in zip(voice.slots(), &mut self.tones) {
+            let inst = &slot.inst;
+            if inst.env_release != 0 {
+                let max_life_count1: i32 = ((duration - (clock - i32::try_from(evt_tick).unwrap()))
+                    as f32)
+                    .mul_add(ins.samples_per_tick, inst.env_release as f32)
+                    as i32;
+                let c = i32::try_from(evt_tick).unwrap()
+                    + duration
+                    + i32::try_from(tone.env_release_clock).unwrap();
+                let mut next: Option<&crate::Event> = None;
+                for eve in events_after {
+                    if i32::try_from(eve.tick).unwrap() > c {
+                        break;
+                    }
+                    if eve.unit == unit_idx
+                        && matches!((eve).payload, crate::EventPayload::On { .. })
+                    {
+                        next = Some(eve);
+                        break;
+                    }
+                }
+                let max_life_count2 = next.map_or_else(
+                    || end_sample.cast_signed() - (clock as f32 * ins.samples_per_tick) as i32,
+                    |next| {
+                        ((i32::try_from(next.tick).unwrap() - clock) as f32 * ins.samples_per_tick)
+                            as i32
+                    },
+                );
+                if max_life_count1 < max_life_count2 {
+                    tone.life_count = max_life_count1;
+                } else {
+                    tone.life_count = max_life_count2;
+                }
+            } else {
+                tone.life_count =
+                    ((duration.saturating_sub(clock - i32::try_from(evt_tick).unwrap())) as f32
+                        * ins.samples_per_tick) as i32;
+            }
+
+            if tone.life_count > 0 {
+                tone.on_count = on_count;
+                tone.smp_pos = 0.;
+                tone.env_pos = 0;
+                if inst.env.is_empty() {
+                    tone.env_volume = 128;
+                    tone.env_start = 128;
+                } else {
+                    tone.env_volume = 0;
+                    tone.env_start = 0;
+                }
+            }
         }
     }
 }

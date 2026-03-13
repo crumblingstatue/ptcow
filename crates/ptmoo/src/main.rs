@@ -97,7 +97,7 @@ fn main() -> std::io::Result<()> {
         .unwrap();
     }
 
-    while herd.moo(&ins, &song, &mut buf, true) {
+    while herd.moo(&ins, &song, &mut buf, true, &mut []) {
         let result = writer.write_all(bytemuck::cast_slice(&buf));
         if let Err(e) = result {
             match e.kind() {

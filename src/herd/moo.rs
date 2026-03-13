@@ -6,10 +6,10 @@ use {
         master::Master,
         pulse_frequency::PULSE_FREQ,
         timing::{self, Tick, meas_to_sample},
-        unit::{MAX_CHANNEL, PanTimeBuf, UnitIdx},
+        unit::{MAX_CHANNEL, PanTimeBuf},
         util::ArrayLenExt as _,
     },
-    std::{iter::zip, ops::ControlFlow},
+    std::ops::ControlFlow,
 };
 
 /// Get the current [`Tick`] the playback is at.
@@ -42,8 +42,9 @@ pub(super) fn next_sample<T: OutSample>(
     dst_sps: SampleRate,
     out: &mut [T; 2],
     advance: bool,
+    extra_units: &mut [crate::Unit],
 ) -> bool {
-    for unit in herd.units.iter_mut() {
+    for unit in herd.units.iter_mut().chain(extra_units.iter_mut()) {
         unit.tone_envelope(&ins.voices);
     }
 
@@ -57,13 +58,13 @@ pub(super) fn next_sample<T: OutSample>(
         }
     }
 
-    for unit in herd.units.iter_mut() {
+    for unit in herd.units.iter_mut().chain(extra_units.iter_mut()) {
         unit.tone_sample(herd.time_pan_index, herd.smp_smooth, &ins.voices);
     }
 
     for ch in 0..MAX_CHANNEL {
         let mut group_smps = [0; _];
-        for unit in herd.units.iter_mut() {
+        for unit in herd.units.iter_mut().chain(extra_units.iter_mut()) {
             if !unit.mute {
                 unit.tone_supple(&mut group_smps, ch, herd.time_pan_index);
             }
@@ -88,7 +89,7 @@ pub(super) fn next_sample<T: OutSample>(
     }
     herd.time_pan_index = (herd.time_pan_index + 1) & (PanTimeBuf::LEN - 1);
 
-    for unit in herd.units.iter_mut() {
+    for unit in herd.units.iter_mut().chain(extra_units.iter_mut()) {
         #[expect(clippy::cast_sign_loss)]
         let key_now = unit.tone_increment_key() as usize;
         unit.tone_increment_sample(PULSE_FREQ.get2(key_now) * herd.smp_stride, &ins.voices);
@@ -150,9 +151,17 @@ pub fn do_event(
 
     match evt.payload {
         EventPayload::On { duration } => {
-            do_on_event(herd, ins, events_after, clock, duration, evt.unit, evt.tick);
+            unit.on(
+                evt.unit,
+                ins,
+                events_after,
+                clock,
+                duration,
+                evt.tick,
+                herd.smp_end,
+            );
         }
-        EventPayload::Key(key) => unit.tone_key(key),
+        EventPayload::Key(key) => unit.set_key(key),
         EventPayload::PanVol(vol) => unit.tone_pan_volume(vol),
         EventPayload::PanTime(pan) => unit.tone_pan_time(pan, dst_sps),
         EventPayload::Velocity(vel) => unit.velocity = vel,
@@ -172,86 +181,6 @@ pub fn do_event(
         EventPayload::Null => return ControlFlow::Break(()),
     }
     ControlFlow::Continue(())
-}
-
-#[expect(clippy::cast_possible_truncation, clippy::cast_precision_loss)]
-fn do_on_event(
-    herd: &mut Herd,
-    ins: &MooInstructions,
-    events_after: &[Event],
-    clock: Tick,
-    duration: u32,
-    u: UnitIdx,
-    evt_tick: Tick,
-) {
-    let Some(unit) = herd.units.get_mut(u) else {
-        return;
-    };
-    // We need a signed clock here for various calculations that can go below zero
-    let clock: i32 = clock.try_into().unwrap();
-    // Same for duration
-    let duration: i32 = duration.try_into().unwrap();
-    let on_count: i32 = ((i32::try_from(evt_tick).unwrap() + duration.saturating_sub(clock)) as f32
-        * ins.samples_per_tick) as i32;
-    if on_count <= 0 {
-        unit.tone_zero_lives();
-        return;
-    }
-
-    unit.tone_key_on();
-    let Some(voice) = ins.voices.get(unit.voice_idx) else {
-        return;
-    };
-    for (slot, tone) in zip(voice.slots(), &mut unit.tones) {
-        let inst = &slot.inst;
-        if inst.env_release != 0 {
-            let max_life_count1: i32 =
-                ((duration - (clock - i32::try_from(evt_tick).unwrap())) as f32)
-                    .mul_add(ins.samples_per_tick, inst.env_release as f32) as i32;
-            let c = i32::try_from(evt_tick).unwrap()
-                + duration
-                + i32::try_from(tone.env_release_clock).unwrap();
-            let mut next: Option<&Event> = None;
-            for eve in events_after {
-                if i32::try_from(eve.tick).unwrap() > c {
-                    break;
-                }
-                if eve.unit == u && matches!((eve).payload, EventPayload::On { .. }) {
-                    next = Some(eve);
-                    break;
-                }
-            }
-            let max_life_count2 = match next {
-                Some(next) => {
-                    ((i32::try_from(next.tick).unwrap() - clock) as f32 * ins.samples_per_tick)
-                        as i32
-                }
-                None => herd.smp_end.cast_signed() - (clock as f32 * ins.samples_per_tick) as i32,
-            };
-            if max_life_count1 < max_life_count2 {
-                tone.life_count = max_life_count1;
-            } else {
-                tone.life_count = max_life_count2;
-            }
-        } else {
-            tone.life_count = ((duration.saturating_sub(clock - i32::try_from(evt_tick).unwrap()))
-                as f32
-                * ins.samples_per_tick) as i32;
-        }
-
-        if tone.life_count > 0 {
-            tone.on_count = on_count;
-            tone.smp_pos = 0.;
-            tone.env_pos = 0;
-            if inst.env.is_empty() {
-                tone.env_volume = 128;
-                tone.env_start = 128;
-            } else {
-                tone.env_volume = 0;
-                tone.env_start = 0;
-            }
-        }
-    }
 }
 
 fn get_total_sample(master: &Master, out_sample_rate: SampleRate) -> u32 {
@@ -325,6 +254,7 @@ impl Herd {
         song: &Song,
         buf: &mut [T],
         advance: bool,
+        extra_units: &mut [crate::Unit],
     ) -> bool {
         if self.moo_end {
             return false;
@@ -339,6 +269,7 @@ impl Herd {
                 ins.out_sample_rate,
                 out_samp,
                 advance,
+                extra_units,
             ) {
                 self.moo_end = true;
                 break;
