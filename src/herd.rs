@@ -174,12 +174,22 @@ impl Voices {
         )]
         self.iter_mut().enumerate().map(|(idx, item)| (VoiceIdx(idx as u8), item))
     }
-    /// Immutably get the voice at `idx`, returning `None` on out of bounds indexing
+    /// Immutably get the voice at `idx`.
+    ///
+    /// If `idx` is 100 or larger, it will get the voice from `extra_voices` instead.
+    ///
+    /// Returns `None` on out of bounds indexing
     #[must_use]
-    pub fn get(&self, idx: VoiceIdx) -> Option<&Voice> {
-        self.0.get(idx.usize())
+    pub fn get<'a>(&'a self, idx: VoiceIdx, extra_voices: &'a [Voice]) -> Option<&'a Voice> {
+        if idx.0 < 100 {
+            self.0.get(idx.usize())
+        } else {
+            extra_voices.get(idx.usize() - 100)
+        }
     }
     /// Mutably get the voice at `idx`, returning `None` on out of bounds indexing
+    ///
+    /// NOTE: This (currently) doesn't have the same behavior as [`Self::get`].
     #[must_use]
     pub fn get_mut(&mut self, idx: VoiceIdx) -> Option<&mut Voice> {
         self.0.get_mut(idx.usize())
@@ -338,10 +348,15 @@ impl Herd {
         self.evt_idx = 0;
     }
     /// Make sure all the cows' voices are ready for playback
-    pub fn tune_cow_voices(&mut self, ins: &MooInstructions, timing: Timing) {
+    pub fn tune_cow_voices(
+        &mut self,
+        ins: &MooInstructions,
+        timing: Timing,
+        extra_voices: &[Voice],
+    ) {
         for unit in self.units.iter_mut() {
             unit.tone_init();
-            unit.reset_voice(ins, VoiceIdx(0), timing);
+            unit.reset_voice(ins, VoiceIdx(0), timing, extra_voices);
         }
     }
 }

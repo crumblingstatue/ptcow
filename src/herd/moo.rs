@@ -1,6 +1,6 @@
 use {
     crate::{
-        Meas, NATIVE_SAMPLE_RATE, SampleRate, SampleT,
+        Meas, NATIVE_SAMPLE_RATE, SampleRate, SampleT, Voice,
         event::{Event, EventPayload},
         herd::{Herd, MooInstructions, Song},
         master::Master,
@@ -43,23 +43,29 @@ pub(super) fn next_sample<T: OutSample>(
     out: &mut [T; 2],
     advance: bool,
     extra_units: &mut [crate::Unit],
+    extra_voices: &[Voice],
 ) -> bool {
     for unit in herd.units.iter_mut().chain(extra_units.iter_mut()) {
-        unit.tone_envelope(&ins.voices);
+        unit.tone_envelope(&ins.voices, extra_voices);
     }
 
     if advance {
         let clock = current_tick(herd, ins);
 
         while herd.evt_idx < events.len() && (events[herd.evt_idx]).tick <= clock {
-            if do_next_event(herd, ins, events, master, clock, dst_sps).is_break() {
+            if do_next_event(herd, ins, events, master, clock, dst_sps, extra_voices).is_break() {
                 break;
             }
         }
     }
 
     for unit in herd.units.iter_mut().chain(extra_units.iter_mut()) {
-        unit.tone_sample(herd.time_pan_index, herd.smp_smooth, &ins.voices);
+        unit.tone_sample(
+            herd.time_pan_index,
+            herd.smp_smooth,
+            &ins.voices,
+            extra_voices,
+        );
     }
 
     for ch in 0..MAX_CHANNEL {
@@ -92,7 +98,11 @@ pub(super) fn next_sample<T: OutSample>(
     for unit in herd.units.iter_mut().chain(extra_units.iter_mut()) {
         #[expect(clippy::cast_sign_loss)]
         let key_now = unit.tone_increment_key() as usize;
-        unit.tone_increment_sample(PULSE_FREQ.get2(key_now) * herd.smp_stride, &ins.voices);
+        unit.tone_increment_sample(
+            PULSE_FREQ.get2(key_now) * herd.smp_stride,
+            &ins.voices,
+            extra_voices,
+        );
     }
 
     for delay in &mut herd.delays {
@@ -105,7 +115,7 @@ pub(super) fn next_sample<T: OutSample>(
         }
         herd.smp_count = herd.smp_repeat;
         herd.evt_idx = 0;
-        herd.tune_cow_voices(ins, master.timing);
+        herd.tune_cow_voices(ins, master.timing, extra_voices);
     }
     true
 }
@@ -117,6 +127,7 @@ fn do_next_event(
     master: &Master,
     clock: Tick,
     dst_sps: SampleRate,
+    extra_voices: &[Voice],
 ) -> ControlFlow<()> {
     let evt = &events[herd.evt_idx];
     do_event(
@@ -127,6 +138,7 @@ fn do_next_event(
         clock,
         dst_sps,
         evt,
+        extra_voices,
     )?;
     herd.evt_idx += 1;
     ControlFlow::Continue(())
@@ -143,6 +155,7 @@ pub fn do_event(
     clock: u32,
     dst_sps: u16,
     evt: &Event,
+    extra_voices: &[Voice],
 ) -> ControlFlow<()> {
     let u = evt.unit;
     let Some(unit) = herd.units.get_mut(u) else {
@@ -159,6 +172,7 @@ pub fn do_event(
                 duration,
                 evt.tick,
                 herd.smp_end,
+                extra_voices,
             );
         }
         EventPayload::Key(key) => unit.set_key(key),
@@ -175,7 +189,7 @@ pub fn do_event(
         | EventPayload::Repeat
         | EventPayload::Last
         | EventPayload::PtcowDebug(_) => {}
-        EventPayload::SetVoice(num) => unit.reset_voice(ins, num, master.timing),
+        EventPayload::SetVoice(num) => unit.reset_voice(ins, num, master.timing, extra_voices),
         EventPayload::SetGroup(num) => unit.group = num,
         EventPayload::Tuning(tuning) => unit.tuning = tuning,
         EventPayload::Null => return ControlFlow::Break(()),
@@ -211,7 +225,13 @@ fn calc_sample_num(meas_num: u32, beat_num: u32, sps: SampleRate, beat_tempo: f3
     clippy::cast_precision_loss,
     clippy::cast_sign_loss
 )]
-pub fn moo_prepare(ins: &mut MooInstructions, herd: &mut Herd, song: &Song, plan: &MooPlan) {
+pub fn moo_prepare(
+    ins: &mut MooInstructions,
+    herd: &mut Herd,
+    song: &Song,
+    plan: &MooPlan,
+    extra_voices: &[Voice],
+) {
     assert_ne!(ins.out_sample_rate, 0);
 
     let meas_end = plan.meas_end.unwrap_or_else(|| song.master.end_meas());
@@ -239,7 +259,7 @@ pub fn moo_prepare(ins: &mut MooInstructions, herd: &mut Herd, song: &Song, plan
     herd.smp_smooth = ins.out_sample_rate / 250;
 
     herd.evt_idx = 0;
-    herd.tune_cow_voices(ins, song.master.timing);
+    herd.tune_cow_voices(ins, song.master.timing, extra_voices);
 }
 
 impl Herd {
@@ -255,6 +275,7 @@ impl Herd {
         buf: &mut [T],
         advance: bool,
         extra_units: &mut [crate::Unit],
+        extra_voices: &[Voice],
     ) -> bool {
         if self.moo_end {
             return false;
@@ -270,6 +291,7 @@ impl Herd {
                 out_samp,
                 advance,
                 extra_units,
+                extra_voices,
             ) {
                 self.moo_end = true;
                 break;

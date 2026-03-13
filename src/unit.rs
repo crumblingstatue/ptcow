@@ -1,7 +1,7 @@
 use std::{iter::zip, ops::RangeInclusive};
 
 use crate::{
-    Key, MooInstructions, NATIVE_SAMPLE_RATE, SampleRate, SampleT, Timing,
+    Key, MooInstructions, NATIVE_SAMPLE_RATE, SampleRate, SampleT, Timing, Voices,
     event::{DEFAULT_BASICKEY, DEFAULT_KEY, DEFAULT_TUNING, DEFAULT_VELOCITY, DEFAULT_VOLUME},
     pulse_frequency::PULSE_FREQ,
     util::ArrayLenExt as _,
@@ -179,8 +179,8 @@ impl Unit {
         clippy::cast_possible_wrap,
         clippy::cast_sign_loss
     )]
-    pub(crate) fn tone_envelope(&mut self, voices: &[Voice]) {
-        let Some(voice) = voices.get(self.voice_idx.usize()) else {
+    pub(crate) fn tone_envelope(&mut self, voices: &Voices, extra_voices: &[Voice]) {
+        let Some(voice) = voices.get(self.voice_idx, extra_voices) else {
             return;
         };
 
@@ -270,8 +270,13 @@ impl Unit {
         self.key_now
     }
 
-    pub(crate) fn tone_increment_sample(&mut self, freq: f32, voices: &[Voice]) {
-        let Some(voice) = voices.get(self.voice_idx.usize()) else {
+    pub(crate) fn tone_increment_sample(
+        &mut self,
+        freq: f32,
+        voices: &Voices,
+        extra_voices: &[Voice],
+    ) {
+        let Some(voice) = voices.get(self.voice_idx, extra_voices) else {
             // If for some reason there is no voice, we just don't do anything
             // instead of panicking
             return;
@@ -334,13 +339,19 @@ impl Unit {
         clippy::cast_possible_truncation,
         clippy::cast_sign_loss
     )]
-    pub fn reset_voice(&mut self, ins: &MooInstructions, mut voice_idx: VoiceIdx, timing: Timing) {
-        if voice_idx.0 >= ins.voices.len() {
+    pub fn reset_voice(
+        &mut self,
+        ins: &MooInstructions,
+        mut voice_idx: VoiceIdx,
+        timing: Timing,
+        extra_voices: &[Voice],
+    ) {
+        if voice_idx.0 < 100 && voice_idx.0 >= ins.voices.len() {
             eprintln!("Error: Voice index out of bounds. Setting to 0.");
             voice_idx = VoiceIdx(0);
         }
         self.set_voice(voice_idx);
-        let Some(voice) = &ins.voices.get(voice_idx) else {
+        let Some(voice) = &ins.voices.get(voice_idx, extra_voices) else {
             eprintln!("Error: Song doesn't have any voices");
             return;
         };
@@ -364,9 +375,10 @@ impl Unit {
         &mut self,
         time_pan_index: usize,
         smooth_smp: SampleRate,
-        voices: &[Voice],
+        voices: &Voices,
+        extra_voices: &[Voice],
     ) {
-        let Some(voice) = &voices.get(self.voice_idx.usize()) else {
+        let Some(voice) = &voices.get(self.voice_idx, extra_voices) else {
             // If for whatever reason there is no voice, we just don't produce any output
             // instead of panicking
             return;
@@ -438,6 +450,7 @@ impl Unit {
         duration: u32,
         evt_tick: crate::Tick,
         end_sample: SampleT,
+        extra_voices: &[Voice],
     ) {
         // We need a signed clock here for various calculations that can go below zero
         let clock: i32 = clock.try_into().unwrap();
@@ -452,7 +465,7 @@ impl Unit {
         }
 
         self.tone_key_on();
-        let Some(voice) = ins.voices.get(self.voice_idx) else {
+        let Some(voice) = ins.voices.get(self.voice_idx, extra_voices) else {
             return;
         };
         for (slot, tone) in zip(voice.slots(), &mut self.tones) {

@@ -72,7 +72,7 @@ fn main() -> std::io::Result<()> {
         meas_repeat: None,
         loop_: !args.no_loop,
     };
-    moo_prepare(&mut ins, &mut herd, &song, &plan);
+    moo_prepare(&mut ins, &mut herd, &song, &plan, &[]);
 
     let mut buf = vec![0i16; args.buf_size];
     let mut writer = std::io::stdout().lock();
@@ -97,7 +97,7 @@ fn main() -> std::io::Result<()> {
         .unwrap();
     }
 
-    while herd.moo(&ins, &song, &mut buf, true, &mut []) {
+    while herd.moo(&ins, &song, &mut buf, true, &mut [], &[]) {
         let result = writer.write_all(bytemuck::cast_slice(&buf));
         if let Err(e) = result {
             match e.kind() {
