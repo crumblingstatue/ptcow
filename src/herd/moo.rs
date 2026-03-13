@@ -1,7 +1,7 @@
 use {
     crate::{
         Meas, NATIVE_SAMPLE_RATE, SampleRate, SampleT,
-        event::{EveList, Event, EventPayload},
+        event::{Event, EventPayload},
         herd::{Herd, MooInstructions, Song},
         master::Master,
         pulse_frequency::PULSE_FREQ,
@@ -37,7 +37,7 @@ impl OutSample for i16 {
 pub(super) fn next_sample<T: OutSample>(
     herd: &mut Herd,
     ins: &MooInstructions,
-    events: &EveList,
+    events: &[Event],
     master: &Master,
     dst_sps: SampleRate,
     out: &mut [T; 2],
@@ -50,7 +50,7 @@ pub(super) fn next_sample<T: OutSample>(
     if advance {
         let clock = current_tick(herd, ins);
 
-        while herd.evt_idx < events.eves.len() && (events.eves[herd.evt_idx]).tick <= clock {
+        while herd.evt_idx < events.len() && (events[herd.evt_idx]).tick <= clock {
             if do_next_event(herd, ins, events, master, clock, dst_sps).is_break() {
                 break;
             }
@@ -112,12 +112,12 @@ pub(super) fn next_sample<T: OutSample>(
 fn do_next_event(
     herd: &mut Herd,
     ins: &MooInstructions,
-    events: &EveList,
+    events: &[Event],
     master: &Master,
     clock: Tick,
     dst_sps: SampleRate,
 ) -> ControlFlow<()> {
-    let evt = &events.eves[herd.evt_idx];
+    let evt = &events[herd.evt_idx];
     do_event(herd, ins, events, master, clock, dst_sps, evt, false)?;
     herd.evt_idx += 1;
     ControlFlow::Continue(())
@@ -129,7 +129,7 @@ fn do_next_event(
 pub fn do_event(
     herd: &mut Herd,
     ins: &MooInstructions,
-    events: &EveList,
+    events: &[Event],
     master: &Master,
     clock: u32,
     dst_sps: u16,
@@ -180,7 +180,7 @@ pub fn do_event(
 fn do_on_event(
     herd: &mut Herd,
     ins: &MooInstructions,
-    events: &EveList,
+    events: &[Event],
     clock: Tick,
     duration: u32,
     u: UnitIdx,
@@ -216,8 +216,7 @@ fn do_on_event(
                 + i32::try_from(tone.env_release_clock).unwrap();
             let mut next: Option<&Event> = None;
             if !ignore_next_on {
-                for i in herd.evt_idx + 1..events.eves.len() {
-                    let eve = &events.eves[i];
+                for eve in &events[herd.evt_idx + 1..] {
                     if i32::try_from(eve.tick).unwrap() > c {
                         break;
                     }
