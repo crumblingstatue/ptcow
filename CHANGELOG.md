@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 - 2026.03.15
+
+- Add `EnvelopeSrc::prepared_size`
+- Better document what `Unit::tones` is
+- Fix divide by zero panic
+- Take &[Event] instead of `&EveList` in a couple of places
+- Take an `events_after` slice in `do_event` (it can be empty)
+- Add ability to have extra units on top of the ones in the song
+- Add ability to have extra voices on top of the ones in the song
+
 ## 0.5.0 - 2026.03.07
 
 - Switch to symphonia for Ogg/Vorbis decoding (it has web support)
