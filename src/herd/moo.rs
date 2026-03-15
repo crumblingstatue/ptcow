@@ -146,7 +146,8 @@ fn do_next_event(
 
 /// Do a single event
 ///
-/// If `ignore_next_on` is true, it ignores next On event. Useful for freeplay.
+/// Usually you can provide an empty `events_after` slice.
+/// `events_after` is only needed for normal playback of a song (with [`Herd::moo`]).
 pub fn do_event(
     herd: &mut Herd,
     ins: &MooInstructions,
