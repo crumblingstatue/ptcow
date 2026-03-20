@@ -34,6 +34,12 @@ impl OutSample for i16 {
     }
 }
 
+impl OutSample for i32 {
+    fn from_moo_samp(moo_samp: i32) -> Self {
+        moo_samp
+    }
+}
+
 pub(super) fn next_sample<T: OutSample>(
     herd: &mut Herd,
     ins: &MooInstructions,
