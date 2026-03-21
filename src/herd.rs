@@ -211,7 +211,6 @@ impl MooInstructions {
 /// Adjust voice and effect tones to output sample rate
 pub fn rebuild_tones(
     ins: &mut MooInstructions,
-    out_sample_rate: SampleRate,
     delays: &mut [Delay],
     overdrives: &mut [Overdrive],
     master: &Master,
@@ -228,7 +227,7 @@ pub fn rebuild_tones(
     }
     let builder = NoiseTable::generate();
     for voice in ins.voices.iter_mut() {
-        voice.recalculate(&builder, out_sample_rate);
+        voice.recalculate(&builder, ins.out_sample_rate);
     }
 }
 
@@ -403,7 +402,6 @@ pub fn read_song(
     song.recalculate_length();
     rebuild_tones(
         &mut ins,
-        out_sample_rate,
         &mut herd.delays,
         &mut herd.overdrives,
         &song.master,
