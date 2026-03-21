@@ -42,9 +42,9 @@ impl OutSample for i32 {
 
 pub(super) fn next_sample<T: OutSample>(
     herd: &mut Herd,
-    ins: &MooInstructions,
+    ins: &mut MooInstructions,
     events: &[Event],
-    master: &Master,
+    master: &mut Master,
     dst_sps: SampleRate,
     out: &mut [T; 2],
     advance: bool,
@@ -128,9 +128,9 @@ pub(super) fn next_sample<T: OutSample>(
 
 fn do_next_event(
     herd: &mut Herd,
-    ins: &MooInstructions,
+    ins: &mut MooInstructions,
     events: &[Event],
-    master: &Master,
+    master: &mut Master,
     clock: Tick,
     dst_sps: SampleRate,
     extra_voices: &[Voice],
@@ -156,9 +156,9 @@ fn do_next_event(
 /// `events_after` is only needed for normal playback of a song (with [`Herd::moo`]).
 pub fn do_event(
     herd: &mut Herd,
-    ins: &MooInstructions,
+    ins: &mut MooInstructions,
     events_after: &[Event],
-    master: &Master,
+    master: &mut Master,
     clock: u32,
     dst_sps: u16,
     evt: &Event,
@@ -190,8 +190,19 @@ pub fn do_event(
         EventPayload::Portament { duration } => {
             unit.porta_destination = timing::tick_to_sample(duration, ins.samples_per_tick);
         }
+        EventPayload::BeatTempo(bpm) => {
+            master.timing.bpm = bpm;
+            ins.samples_per_tick = timing::samples_per_tick(ins.out_sample_rate, master.timing);
+            herd.smp_count = timing::tick_to_sample(clock, ins.samples_per_tick);
+            // Also need to recalculate loop points if we don't want the song to end prematurely
+            herd.smp_end = meas_to_sample(master.end_meas(), ins.samples_per_tick, master.timing);
+            herd.smp_repeat = meas_to_sample(
+                master.loop_points.repeat,
+                ins.samples_per_tick,
+                master.timing,
+            );
+        }
         EventPayload::BeatClock
-        | EventPayload::BeatTempo
         | EventPayload::BeatNum
         | EventPayload::Repeat
         | EventPayload::Last
@@ -277,8 +288,8 @@ impl Herd {
     /// the [`Unit`](crate::Unit)s to play audio.
     pub fn moo<T: OutSample>(
         &mut self,
-        ins: &MooInstructions,
-        song: &Song,
+        ins: &mut MooInstructions,
+        song: &mut Song,
         buf: &mut [T],
         advance: bool,
         extra_units: &mut [crate::Unit],
@@ -293,7 +304,7 @@ impl Herd {
                 self,
                 ins,
                 &song.events,
-                &song.master,
+                &mut song.master,
                 ins.out_sample_rate,
                 out_samp,
                 advance,

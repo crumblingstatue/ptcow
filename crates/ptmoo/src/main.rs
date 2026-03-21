@@ -55,7 +55,7 @@ fn main() -> std::io::Result<()> {
             return Err(std::io::Error::other("File read error"));
         }
     };
-    let (song, mut herd, mut ins) = match ptcow::read_song(&data, args.sample_rate) {
+    let (mut song, mut herd, mut ins) = match ptcow::read_song(&data, args.sample_rate) {
         Ok((song, herd, ins)) => (song, herd, ins),
         Err(e) => {
             writeln!(
@@ -97,7 +97,7 @@ fn main() -> std::io::Result<()> {
         .unwrap();
     }
 
-    while herd.moo(&ins, &song, &mut buf, true, &mut [], &[]) {
+    while herd.moo(&mut ins, &mut song, &mut buf, true, &mut [], &[]) {
         let result = writer.write_all(bytemuck::cast_slice(&buf));
         if let Err(e) = result {
             match e.kind() {

@@ -61,7 +61,7 @@ impl EveList {
                 5 => EventPayload::Volume(value.cast_signed().try_into().unwrap()),
                 6 => EventPayload::Portament { duration: value },
                 7 => EventPayload::BeatClock,
-                8 => EventPayload::BeatTempo,
+                8 => EventPayload::BeatTempo(f32::from_bits(value)),
                 9 => EventPayload::BeatNum,
                 10 => EventPayload::Repeat,
                 11 => EventPayload::Last,
@@ -110,7 +110,7 @@ impl EveList {
                 EventPayload::Volume(vol) => (5, vol.cast_unsigned().into()),
                 EventPayload::Portament { duration } => (6, *duration),
                 EventPayload::BeatClock => (7, 0),
-                EventPayload::BeatTempo => (8, 0),
+                EventPayload::BeatTempo(tempo) => (8, tempo.to_bits()),
                 EventPayload::BeatNum => (9, 0),
                 EventPayload::Repeat => (10, 0),
                 EventPayload::Last => (11, 0),
@@ -192,8 +192,8 @@ pub enum EventPayload {
     },
     /// Ignored. Only present for compatibility reasons.
     BeatClock,
-    /// Ignored. Only present for compatibility reasons.
-    BeatTempo,
+    /// (Currently non-standard). Sets the tempo (bpm) of the song.
+    BeatTempo(f32),
     /// Ignored. Only present for compatibility reasons.
     BeatNum,
     /// Ignored. Only present for compatibility reasons.
