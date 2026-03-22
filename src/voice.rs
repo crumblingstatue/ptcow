@@ -188,7 +188,7 @@ pub struct VoiceUnit {
 impl Default for VoiceUnit {
     fn default() -> Self {
         Self {
-            basic_key: DEFAULT_BASICKEY.cast_signed(),
+            basic_key: DEFAULT_BASICKEY,
             tuning: 1.0,
             flags: VoiceFlags::SMOOTH,
         }

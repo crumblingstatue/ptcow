@@ -158,9 +158,10 @@ const fn event_duration(payload: EventPayload) -> Option<u32> {
 
 pub const DEFAULT_VOLUME: u16 = 104;
 pub const DEFAULT_VELOCITY: u16 = 104;
-/// The default [`Key`] units start out with
+/// The default [`Key`] units start out with (A4)
 pub const DEFAULT_KEY: Key = 24576;
-pub const DEFAULT_BASICKEY: u32 = 17664;
+/// The default base [`Key`] (A4) for voices
+pub const DEFAULT_BASICKEY: Key = 17664;
 pub const DEFAULT_TUNING: f32 = 1.0;
 
 /// Payload of an event

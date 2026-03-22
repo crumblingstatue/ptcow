@@ -365,8 +365,7 @@ impl Unit {
                 (inst.num_samples as f32 * timing.bpm)
                     / (f32::from(NATIVE_SAMPLE_RATE) * 60. * vu.tuning)
             } else {
-                #[expect(clippy::cast_possible_wrap)]
-                (PULSE_FREQ.get((DEFAULT_BASICKEY as i32).wrapping_sub(vu.basic_key)) * vu.tuning)
+                PULSE_FREQ.get(DEFAULT_BASICKEY.wrapping_sub(vu.basic_key)) * vu.tuning
             };
         }
     }
